@@ -60,9 +60,7 @@ string Vehicle::str() const
 // Infantry
 Infantry::Infantry(InfantryType infantryType, int quantity, int weight, const Position pos)
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
-
 Infantry::~Infantry() {}
-
 // Kiểm tra số chính phương
 bool Infantry::isPerfectSquare(int n) const
 {
@@ -143,6 +141,39 @@ string Infantry::str() const
        << "]";
     return ss.str();
 }
+
+// Army
+Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
+    : name(name), battleField(battleField), LF(0), EXP(0)
+{
+    unitList = new UnitList();
+    for (int i = 0; i < size; i++)
+    {
+        const Unit *unit = unitArray[i];
+        unitList->addUnit(unit);
+
+        const Vehicle *vehicle = dynamic_cast<const Vehicle *>(unit);
+        if (vehicle)
+        {
+            LF += vehicle->getAttackScore();
+            if (LF > 1000)
+                LF = 1000;
+            if (LF < 0)
+                LF = 0;
+            continue;
+        }
+        const Infantry *infantry = dynamic_cast<const Infantry *>(unit);
+        if (infantry)
+        {
+            EXP += infantry->getAttackScore();
+            if (EXP > 500)
+                EXP = 500;
+            if (EXP < 0)
+                EXP = 0;
+        }
+    }
+}
+Army::~Army() {}
 
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER

@@ -76,6 +76,7 @@ public:
     Army(Unit **unitArray, int size, string name, BattleField *battleField);
     virtual void fight(Army *enemy, bool defense = false) = 0;
     virtual string str() const = 0;
+    virtual ~Army();
 };
 
 class Position
@@ -133,7 +134,9 @@ public:
     string str() const override;
     string getStringType() const;
 
-} class UnitList
+} 
+
+class UnitList
 {
 private:
     int capacity;
