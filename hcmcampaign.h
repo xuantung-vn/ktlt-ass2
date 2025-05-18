@@ -19,24 +19,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 // Forward declaration
-class Unit;
-class UnitList;
-class Army;
-class TerrainElement;
-class Vehicle;
-class Infantry;
-class LiberationArmy;
-class ARVN;
-class Position;
-class Road;
-class Mountain;
-class River;
-class Urban;
-class Fortification;
-class SpecialZone;
-class BattleField;
 class HCMCampaign;
-class Configuration;
 
 enum VehicleType
 {
@@ -264,6 +247,7 @@ public:
     SpecialZone(const Position& pos);
     void getEffect(Army* army) override;
 };
+
 class BattleField
 {
 private:
@@ -277,6 +261,20 @@ public:
     ~BattleField();
 };
 
+class Configuration {
+private:
+    int num_rows, num_cols;
+    vector<Position*> arrayForest, arrayRiver, arrayFortification, arrayUrban, arraySpecialZone;
+    Unit** liberationUnits;
+    int liberationUnitsSize;
+    Unit** ARVNUnits;
+    int ARVNUnitsSize;
+    int eventCode;
+public:
+    Configuration(const string& filepath);
+    string str() const;
+    ~Configuration();
+};
 class HCMCampaign
 {
 private:

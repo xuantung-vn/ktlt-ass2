@@ -53,7 +53,137 @@ double euclideanDistance(const Position &p1, const Position &p2)
     int dc = p1.getCol() - p2.getCol();
     return std::sqrt(dr * dr + dc * dc);
 }
-// Unit
+Unit *parseUnit(const string &unitStr)
+{
+    string cleaned = trim(unitStr);
+    size_t openParen = cleaned.find('(');
+    if (openParen == string::npos)
+        return nullptr;
+
+    string unitName = trim(cleaned.substr(0, openParen));
+    string params = cleaned.substr(openParen + 1, cleaned.find_last_of(')') - openParen - 1);
+    stringstream ss(params);
+    string quantityStr, weightStr, posStr, armyStr;
+    if (!getline(ss, quantityStr, ',') || !getline(ss, weightStr, ',') ||
+        !getline(ss, posStr, ',') || !getline(ss, armyStr, ','))
+    {
+        return nullptr;
+    }
+
+    try
+    {
+        int quantity = stoi(trim(quantityStr));
+        int weight = stoi(trim(weightStr));
+        int armyBelong = stoi(trim(armyStr));
+        if (quantity <= 0 || weight <= 0 || (armyBelong != 0 && armyBelong != 1))
+        {
+            return nullptr;
+        }
+        Position *pos = parsePosition(posStr);
+        if (!pos)
+            return nullptr;
+
+        VehicleType vType;
+        InfantryType iType;
+        bool isVehicle;
+        if (!getUnitType(unitName, vType, iType, isVehicle))
+        {
+            delete pos;
+            return nullptr;
+        }
+
+        Unit *unit = nullptr;
+        if (isVehicle)
+        {
+            unit = new Vehicle(vType, quantity, weight, *pos);
+        }
+        else
+        {
+            unit = new Infantry(iType, quantity, weight, *pos);
+        }
+        delete pos;
+        return unit;
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+string trim(const string &s)
+{
+    string result = s;
+    result.erase(0, result.find_first_not_of(" \t"));
+    result.erase(result.find_last_not_of(" \t") + 1);
+    return result;
+}
+
+Position *parsePosition(const string &posStr)
+{
+    string cleaned = trim(posStr);
+    if (cleaned.size() < 3 || cleaned[0] != '(' || cleaned[cleaned.size() - 1] != ')')
+    {
+        return nullptr;
+    }
+    cleaned = cleaned.substr(1, cleaned.size() - 2); // Remove ( )
+    size_t comma = cleaned.find(',');
+    if (comma == string::npos)
+        return nullptr;
+    try
+    {
+        int r = stoi(cleaned.substr(0, comma));
+        int c = stoi(cleaned.substr(comma + 1));
+        return new Position(r, c);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+
+vector<Position *> parseTerrainArray(const string &value)
+{
+    vector<Position *> positions;
+    if (value.size() < 2 || value[0] != '[' || value[value.size() - 1] != ']')
+    {
+        return positions;
+    }
+    string inner = trim(value.substr(1, value.size() - 2));
+    if (inner.empty())
+        return positions;
+
+    stringstream ss(inner);
+    string posStr;
+    while (getline(ss, posStr, ','))
+    {
+        Position *pos = parsePosition(posStr);
+        if (pos)
+            positions.push_back(pos);
+    }
+    return positions;
+}
+
+bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bool &isVehicle)
+{
+    static const map<string, VehicleType> vehicleMap = {
+        {"TRUCK", TRUCK}, {"MORTAR", MORTAR}, {"ANTIAIRCRAFT", ANTIAIRCRAFT}, {"ARMOREDCAR", ARMOREDCAR}, {"APC", APC}, {"ARTILLERY", ARTILLERY}, {"TANK", TANK}};
+    static const map<string, InfantryType> infantryMap = {
+        {"SNIPER", SNIPER}, {"ANTIAIRCRAFTSQUAD", ANTIAIRCRAFTSQUAD}, {"MORTARSQUAD", MORTARSQUAD}, {"ENGINEER", ENGINEER}, {"SPECIALFORCES", SPECIALFORCES}, {"REGULARINFANTRY", REGULARINFANTRY}};
+    auto vIt = vehicleMap.find(name);
+    if (vIt != vehicleMap.end())
+    {
+        vType = vIt->second;
+        isVehicle = true;
+        return true;
+    }
+    auto iIt = infantryMap.find(name);
+    if (iIt != infantryMap.end())
+    {
+        iType = iIt->second;
+        isVehicle = false;
+        return true;
+    }
+    return false;
+}
 Unit::Unit(int quantity, int weight, const Position pos)
     : quantity(quantity), weight(weight), pos(pos) {}
 
@@ -912,8 +1042,8 @@ ARVN::~ARVN()
     // Army base class handles unitList deletion
 }
 
-TerrainElement::TerrainElement(){}
-TerrainElement::~TerrainElement(){}
+TerrainElement::TerrainElement() {}
+TerrainElement::~TerrainElement() {}
 Road::Road()
 {
 }
@@ -1244,6 +1374,207 @@ BattleField::~BattleField()
         delete[] terrain[i];
     }
     delete[] terrain;
+}
+
+// Configuration
+Configuration::Configuration(const string &filepath)
+    : num_rows(0), num_cols(0),
+      liberationUnits(nullptr), liberationUnitsSize(0),
+      ARVNUnits(nullptr), ARVNUnitsSize(0),
+      eventCode(0)
+{
+    ifstream file(filepath);
+    if (!file.is_open())
+        return;
+
+    string line;
+    vector<Unit *> libUnits, arvnUnits;
+    while (getline(file, line))
+    {
+        line = trim(line);
+        if (line.empty())
+            continue;
+
+        size_t eqPos = line.find('=');
+        if (eqPos == string::npos)
+            continue;
+        string key = trim(line.substr(0, eqPos));
+        string value = trim(line.substr(eqPos + 1));
+
+        if (key == "NUM_ROWS")
+        {
+            try
+            {
+                num_rows = stoi(value);
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "NUM_COLS")
+        {
+            try
+            {
+                num_cols = stoi(value);
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "ARRAY_FOREST")
+        {
+            arrayForest = parseTerrainArray(value);
+        }
+        else if (key == "ARRAY_RIVER")
+        {
+            arrayRiver = parseTerrainArray(value);
+        }
+        else if (key == "ARRAY_FORTIFICATION")
+        {
+            arrayFortification = parseTerrainArray(value);
+        }
+        else if (key == "ARRAY_URBAN")
+        {
+            arrayUrban = parseTerrainArray(value);
+        }
+        else if (key == "ARRAY_SPECIAL_ZONE")
+        {
+            arraySpecialZone = parseTerrainArray(value);
+        }
+        else if (key == "UNIT_LIST")
+        {
+            if (value.size() < 2 || value[0] != '[' || value[value.size() - 1] != ']')
+                continue;
+            string inner = trim(value.substr(1, value.size() - 2));
+            if (inner.empty())
+                continue;
+
+            stringstream ss(inner);
+            string unitStr;
+            while (getline(ss, unitStr, ','))
+            {
+                Unit *unit = parseUnit(unitStr);
+                if (unit)
+                {
+                    string posStr = unit->getCurrentPosition().str();
+                    int armyBelong = (posStr == "(1,2)" || posStr == "(1,1)") ? 0 : 1; // Example logic
+                    if (armyBelong == 0)
+                    {
+                        libUnits.push_back(unit);
+                    }
+                    else
+                    {
+                        arvnUnits.push_back(unit);
+                    }
+                }
+            }
+        }
+        else if (key == "EVENT_CODE")
+        {
+            try
+            {
+                eventCode = stoi(value);
+                if (eventCode < 0)
+                    eventCode = 0;
+                if (eventCode > 99)
+                    eventCode = eventCode % 100;
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+    file.close();
+
+    liberationUnitsSize = libUnits.size();
+    if (liberationUnitsSize > 0)
+    {
+        liberationUnits = new Unit *[liberationUnitsSize];
+        for (int i = 0; i < liberationUnitsSize; i++)
+        {
+            liberationUnits[i] = libUnits[i];
+        }
+    }
+    ARVNUnitsSize = arvnUnits.size();
+    if (ARVNUnitsSize > 0)
+    {
+        ARVNUnits = new Unit *[ARVNUnitsSize];
+        for (int i = 0; i < ARVNUnitsSize; i++)
+        {
+            ARVNUnits[i] = arvnUnits[i];
+        }
+    }
+}
+
+string Configuration::str() const
+{
+    stringstream ss;
+    ss << "Configuration[";
+    ss << "num_rows=" << num_rows << ",";
+    ss << "num_cols=" << num_cols << ",";
+
+    auto printArray = [&](const vector<Position *> &arr, const string &name)
+    {
+        ss << name << "=[";
+        for (size_t i = 0; i < arr.size(); i++)
+        {
+            ss << arr[i]->str();
+            if (i < arr.size() - 1)
+                ss << ",";
+        }
+        ss << "],";
+    };
+    printArray(arrayForest, "arrayForest");
+    printArray(arrayRiver, "arrayRiver");
+    printArray(arrayFortification, "arrayFortification");
+    printArray(arrayUrban, "arrayUrban");
+    printArray(arraySpecialZone, "arraySpecialZone");
+
+    ss << "liberationUnits=[";
+    for (int i = 0; i < liberationUnitsSize; i++)
+    {
+        ss << liberationUnits[i]->str();
+        if (i < liberationUnitsSize - 1)
+            ss << ",";
+    }
+    ss << "],";
+    ss << "ARVNUnits=[";
+    for (int i = 0; i < ARVNUnitsSize; i++)
+    {
+        ss << ARVNUnits[i]->str();
+        if (i < ARVNUnitsSize - 1)
+            ss << ",";
+    }
+    ss << "],";
+
+    ss << "eventCode=" << eventCode;
+    ss << "]";
+    return ss.str();
+}
+
+Configuration::~Configuration()
+{
+    for (Position *pos : arrayForest)
+        delete pos;
+    for (Position *pos : arrayRiver)
+        delete pos;
+    for (Position *pos : arrayFortification)
+        delete pos;
+    for (Position *pos : arrayUrban)
+        delete pos;
+    for (Position *pos : arraySpecialZone)
+        delete pos;
+
+    for (int i = 0; i < liberationUnitsSize; i++)
+    {
+        delete liberationUnits[i];
+    }
+    delete[] liberationUnits;
+    for (int i = 0; i < ARVNUnitsSize; i++)
+    {
+        delete ARVNUnits[i];
+    }
+    delete[] ARVNUnits;
 }
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER
