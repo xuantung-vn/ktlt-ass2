@@ -59,12 +59,12 @@ Unit::Unit(int quantity, int weight, const Position pos)
 
 Unit::~Unit() {}
 
-Unit::setQuantity(int quan)
+void Unit::setQuantity(int quan)
 {
     quantity = quan;
 }
 
-Unit::setWeight(int w)
+void Unit::setWeight(int w)
 {
     weight = w;
 }
@@ -73,7 +73,7 @@ int Unit::getWeight() const { return weight; }
 
 int Unit::getQuantity() const { return quantity; }
 
-Unit::setPos(Position p)
+void Unit::setPos(Position p)
 {
     pos = p;
 }
@@ -256,7 +256,7 @@ void Army::setLF(int lf) { LF = lf; }
 void Army::setExp(int exp) { EXP = exp; }
 
 // LiberationArmy
-LiberationArmy::LiberationArmy(const Unit **unitArray, int size, string name, BattleField *battleField) : Army(unitArray, size, name, battleField) {}
+LiberationArmy::LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField) : Army(unitArray, size, name, battleField) {}
 
 string LiberationArmy::str() const
 {
@@ -267,7 +267,7 @@ LiberationArmy::~LiberationArmy()
 { // unitList is deleted by base class Army
 }
 
-void LiberationArmy::removeUnits(const vector<Unit *> &units)
+void LiberationArmy::removeUnits(vector<Unit *> &units)
 {
     for (Unit *unit : units)
     {
@@ -912,6 +912,8 @@ ARVN::~ARVN()
     // Army base class handles unitList deletion
 }
 
+TerrainElement::TerrainElement(){}
+TerrainElement::~TerrainElement(){}
 Road::Road()
 {
 }
@@ -1171,6 +1173,77 @@ void SpecialZone::getEffect(Army *army)
         newEXP = 0;
     army->setLF(newLF);
     army->setEXP(newEXP);
+}
+
+BattleField::BattleField(int n_rows, int n_cols, vector<Position *> arrayForest,
+                         vector<Position *> arrayRiver, vector<Position *> arrayFortification,
+                         vector<Position *> arrayUrban, vector<Position *> arraySpecialZone)
+    : n_rows(n_rows >= 0 ? n_rows : 0), n_cols(n_cols >= 0 ? n_cols : 0)
+{
+    terrain = new TerrainElement *[n_rows];
+    for (int i = 0; i < n_rows; i++)
+    {
+        terrain[i] = new TerrainElement *[n_cols];
+        for (int j = 0; j < n_cols; j++)
+        {
+            terrain[i][j] = new Road();
+        }
+    }
+
+    auto assignTerrain = [&](Position *pos, TerrainElement *element)
+    {
+        if (pos && pos->getRow() >= 0 && pos->getRow() < n_rows &&
+            pos->getCol() >= 0 && pos->getCol() < n_cols)
+        {
+            delete terrain[pos->getRow()][pos->getCol()];
+            terrain[pos->getRow()][pos->getCol()] = element;
+        }
+        else
+        {
+            delete element;
+        }
+    };
+
+    for (Position *pos : arrayForest)
+    {
+        assignTerrain(pos, new Mountain(*pos));
+    }
+    for (Position *pos : arrayRiver)
+    {
+        assignTerrain(pos, new River(*pos));
+    }
+    for (Position *pos : arrayFortification)
+    {
+        assignTerrain(pos, new Fortification(*pos));
+    }
+    for (Position *pos : arrayUrban)
+    {
+        assignTerrain(pos, new Urban(*pos));
+    }
+    for (Position *pos : arraySpecialZone)
+    {
+        assignTerrain(pos, new SpecialZone(*pos));
+    }
+}
+
+string BattleField::str() const
+{
+    stringstream ss;
+    ss << "BattleField[n_rows=" << n_rows << ",n_cols=" << n_cols << "]";
+    return ss.str();
+}
+
+BattleField::~BattleField()
+{
+    for (int i = 0; i < n_rows; i++)
+    {
+        for (int j = 0; j < n_cols; j++)
+        {
+            delete terrain[i][j];
+        }
+        delete[] terrain[i];
+    }
+    delete[] terrain;
 }
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER

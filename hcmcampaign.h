@@ -269,6 +269,7 @@ class BattleField
 private:
     int n_rows, n_cols;
     // TODO
+    TerrainElement** terrain;
 public:
     BattleField(int n_rows, int n_cols, vector<Position *> arrayForest,
                 vector<Position *> arrayRiver, vector<Position *> arrayFortification,
