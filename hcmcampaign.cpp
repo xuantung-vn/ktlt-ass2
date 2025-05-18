@@ -18,6 +18,35 @@ int nextFibonacci(int n)
     }
     return b;
 }
+bool isSpecialNumber(int n, int k)
+{
+    if (n < 0)
+        return false;
+    vector<int> powers;
+    int power = 1;
+    while (power <= n)
+    {
+        powers.push_back(power);
+        if (power > n / k)
+            break;
+        power *= k;
+    }
+    int m = powers.size();
+    for (int mask = 0; mask < (1 << m); mask++)
+    {
+        int sum = 0;
+        for (int i = 0; i < m; i++)
+        {
+            if (mask & (1 << i))
+            {
+                sum += powers[i];
+            }
+        }
+        if (sum == n)
+            return true;
+    }
+    return false;
+}
 
 // Unit
 Unit::Unit(int quantity, int weight, const Position pos)
@@ -192,32 +221,23 @@ string Infantry::str() const
 Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
     : name(name), battleField(battleField), LF(0), EXP(0)
 {
-    unitList = new UnitList();
+    unitList = new UnitList(LF, EXP);
     for (int i = 0; i < size; i++)
     {
-        const Unit *unit = unitArray[i];
-        unitList->insert(unit);
-
-        const Vehicle *vehicle = dynamic_cast<const Vehicle *>(unit);
-        if (vehicle)
+        unitList->insert(unitArray[i]);
+        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unitArray[i]))
         {
             LF += vehicle->getAttackScore();
-            if (LF > 1000)
-                LF = 1000;
-            if (LF < 0)
-                LF = 0;
-            continue;
         }
-        const Infantry *infantry = dynamic_cast<const Infantry *>(unit);
-        if (infantry)
+        else if (Infantry *infantry = dynamic_cast<Infantry *>(unitArray[i]))
         {
             EXP += infantry->getAttackScore();
-            if (EXP > 500)
-                EXP = 500;
-            if (EXP < 0)
-                EXP = 0;
         }
     }
+    if (LF > 1000)
+        LF = 1000;
+    if (EXP > 500)
+        EXP = 500;
 }
 
 Army::~Army() { delete unitList; }
@@ -485,55 +505,117 @@ void LiberationArmy::fight(Army *enemy, bool defense)
 }
 
 // Unit List
-UnitList::UnitList(int capacity) : capacity(capacity), size(0)
+UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size(0)
 {
-    units = new Unit *[capacity];
+    int S = armyLF + armyEXP;
+    bool isSpecial = false;
+    for (int k : {3, 5, 7})
+    {
+        if (isSpecialNumber(S, k))
+        {
+            isSpecial = true;
+            break;
+        }
+    }
+    capacity = isSpecial ? 12 : 8;
 }
 
 UnitList::~UnitList()
 {
-    for (int i = 0; i < size; i++)
-    {
-        delete units[i]; // Assume UnitList owns the units
-    }
-    delete[] units;
+    clear();
 }
 
 bool UnitList::isContain(VehicleType vehicleType)
 {
-    for (int i = 0; i < size; i++)
+    Node *current = head;
+    while (current)
     {
-        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(units[i]))
+        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(current->unit))
         {
-            if (vehicle->getVehicleType() == vehicleType)
+            if (vehicle->getStringType() == vehicleTypeToString(vehicleType))
             {
                 return true;
             }
         }
+        current = current->next;
     }
     return false;
 }
 
 bool UnitList::isContain(InfantryType infantryType)
 {
-    for (int i = 0; i < size; i++)
+    Node *current = head;
+    while (current)
     {
-        if (Infantry *infantry = dynamic_cast<Infantry *>(units[i]))
+        if (Infantry *infantry = dynamic_cast<Infantry *>(current->unit))
         {
             if (infantry->getStringType() == infantryTypeToString(infantryType))
             {
                 return true;
             }
         }
+        current = current->next;
     }
     return false;
 }
 
 bool UnitList::insert(Unit *unit)
 {
-    if (size >= capacity)
+    if (!unit || size >= capacity)
         return false;
-    units[size++] = unit;
+    Node *current = head;
+    while (current)
+    {
+        bool sameType = false;
+        bool samePos = current->unit->getCurrentPosition().str() == unit->getCurrentPosition().str();
+        if (Vehicle *v1 = dynamic_cast<Vehicle *>(current->unit))
+        {
+            if (Vehicle *v2 = dynamic_cast<Vehicle *>(unit))
+            {
+                sameType = v1->getStringType() == v2->getStringType();
+            }
+        }
+        else if (Infantry *i1 = dynamic_cast<Infantry *>(current->unit))
+        {
+            if (Infantry *i2 = dynamic_cast<Infantry *>(unit))
+            {
+                sameType = i1->getStringType() == i2->getStringType();
+            }
+        }
+        if (sameType && samePos)
+        {
+            current->unit->setQuantity(current->unit->getQuantity() + unit->getQuantity());
+            return true;
+        }
+        current = current->next;
+    }
+
+    Node *newNode = new Node(unit);
+    if (dynamic_cast<Infantry *>(unit))
+    {
+        newNode->next = head;
+        head = newNode;
+        if (!tail)
+            tail = newNode;
+    }
+    else if (dynamic_cast<Vehicle *>(unit))
+    {
+        if (!head)
+        {
+            head = tail = newNode;
+        }
+        else
+        {
+            tail->next = newNode;
+            tail = newNode;
+        }
+    }
+    else
+    {
+        delete newNode;
+        return false;
+    }
+    size++;
     return true;
 }
 
@@ -543,67 +625,86 @@ string UnitList::str() const
     int vehicleCount = 0;
     int infantryCount = 0;
 
-    for (int i = 0; i < size; i++)
+    Node *current = head;
+    while (current)
     {
-        if (dynamic_cast<Vehicle *>(units[i]))
+        if (dynamic_cast<Vehicle *>(current->unit))
         {
             vehicleCount++;
         }
-        else if (dynamic_cast<Infantry *>(units[i]))
+        else if (dynamic_cast<Infantry *>(current->unit))
         {
             infantryCount++;
         }
+        current = current->next;
     }
 
     ss << "UnitList[count_vehicle=" << vehicleCount
        << ";count_infantry=" << infantryCount << ";";
 
-    // Append unit list
-    for (int i = 0; i < size; i++)
+    current = head;
+    for (int i = 0; current; i++, current = current->next)
     {
-        ss << units[i]->str();
-        if (i < size - 1)
-        {
+        ss << current->unit->str();
+        if (current->next)
             ss << ",";
-        }
     }
 
     ss << "]";
     return ss.str();
 }
-
 vector<Unit *> UnitList::getAllUnits() const
 {
     vector<Unit *> result;
-    for (int i = 0; i < size; i++)
+    Node *current = head;
+    while (current)
     {
-        result.push_back(units[i]);
+        result.push_back(current->unit);
+        current = current->next;
     }
     return result;
 }
 
 void UnitList::removeUnit(Unit *unit)
 {
-    for (int i = 0; i < size; i++)
+    Node *current = head;
+    Node *prev = nullptr;
+    while (current)
     {
-        if (units[i] == unit)
+        if (current->unit == unit)
         {
-            for (int j = i; j < size - 1; j++)
+            if (prev)
             {
-                units[j] = units[j + 1];
+                prev->next = current->next;
             }
+            else
+            {
+                head = current->next;
+            }
+            if (current == tail)
+            {
+                tail = prev;
+            }
+            delete current;
             size--;
-            break;
+            return;
         }
+        prev = current;
+        current = current->next;
     }
 }
 
-void UnitList::clear()
+void UnitList::
 {
-    for (int i = 0; i < size; i++)
+    Node *current = head;
+    while (current)
     {
-        delete units[i];
+        Node *next = current->next;
+        delete current->unit; // Assume ownership
+        delete current;
+        current = next;
     }
+    head = tail = nullptr;
     size = 0;
 }
 

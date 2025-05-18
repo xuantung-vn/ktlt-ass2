@@ -43,6 +43,7 @@ enum VehicleType
     ARTILLERY,
     TANK
 };
+
 enum InfantryType
 {
     SNIPER,
@@ -72,6 +73,7 @@ public:
     int getExp();
     void setExp(int exp);
 };
+
 class LiberationArmy : public Army
 {
 public:
@@ -100,6 +102,7 @@ public:
 
     virtual ~LiberationArmy();
 };
+
 class ARVN : public Army
 {
 public:
@@ -107,7 +110,9 @@ public:
     void fight(Army *enemy, bool defense);
     void ~ARVN();
     string str() const;
-} class Position
+}
+
+class Position
 {
 private:
     int r, c;
@@ -140,6 +145,7 @@ public:
     int getQuantity() const;
     int getWeight() const;
 };
+
 class Vehicle : public Unit
 {
 private:
@@ -153,6 +159,7 @@ public:
     string getStringType() const;
     VehicleType getVehicleType() const;
 };
+
 class Infantry : public Unit
 {
 private:
@@ -173,12 +180,19 @@ public:
 class UnitList
 {
 private:
-    Unit **units;
+    struct Node
+    {
+        Unit *unit;
+        Node *next;
+        Node(Unit *u) : unit(u), next(nullptr) {}
+    };
+    Node *head;
+    Node *tail;
     int capacity;
     int size;
 
 public:
-    UnitList(int capacity);
+    UnitList(int armyLF, int armyEXP);
     bool insert(Unit *unit);                   // return true if insert successfully
     bool isContain(VehicleType vehicleType);   // return true if it exists
     bool isContain(InfantryType infantryType); // return true if it exists
@@ -190,7 +204,7 @@ public:
 
 private:
     string vehicleTypeToString(Vehicle type) const
-        string infantryTypeToString(InfantryType type) const
+    string infantryTypeToString(InfantryType type) const
 };
 
 class TerrainElement
