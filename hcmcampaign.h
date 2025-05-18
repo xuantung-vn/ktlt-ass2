@@ -19,17 +19,22 @@
 ////////////////////////////////////////////////////////////////////////
 
 // Forward declaration
+class Unit;
+class UnitList;
+class Army;
 class TerrainElement;
-
+class Vehicle;
+class Infantry;
+class LiberationArmy;
+class ARVN;
+class Position;
 class Road;
 class Mountain;
 class River;
 class Urban;
 class Fortification;
 class SpecialZone;
-
 class BattleField;
-
 class HCMCampaign;
 class Configuration;
 
@@ -214,7 +219,51 @@ public:
     ~TerrainElement();
     virtual void getEffect(Army *army) = 0;
 };
+class Road : public TerrainElement {
+public:
+    Road();
+    void getEffect(Army* army) override;
+};
 
+class Mountain : public TerrainElement {
+private:
+    Position pos;
+public:
+    Mountain(const Position& pos);
+    void getEffect(Army* army) override;
+};
+
+class River : public TerrainElement {
+private:
+    Position pos;
+public:
+    River(const Position& pos);
+    void getEffect(Army* army) override;
+};
+
+class Urban : public TerrainElement {
+private:
+    Position pos;
+public:
+    Urban(const Position& pos);
+    void getEffect(Army* army) override;
+};
+
+class Fortification : public TerrainElement {
+private:
+    Position pos;
+public:
+    Fortification(const Position& pos);
+    void getEffect(Army* army) override;
+};
+
+class SpecialZone : public TerrainElement {
+private:
+    Position pos;
+public:
+    SpecialZone(const Position& pos);
+    void getEffect(Army* army) override;
+};
 class BattleField
 {
 private:

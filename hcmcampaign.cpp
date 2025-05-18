@@ -47,7 +47,12 @@ bool isSpecialNumber(int n, int k)
     }
     return false;
 }
-
+double euclideanDistance(const Position &p1, const Position &p2)
+{
+    int dr = p1.getRow() - p2.getRow();
+    int dc = p1.getCol() - p2.getCol();
+    return std::sqrt(dr * dr + dc * dc);
+}
 // Unit
 Unit::Unit(int quantity, int weight, const Position pos)
     : quantity(quantity), weight(weight), pos(pos) {}
@@ -905,6 +910,267 @@ string ARVN::str() const
 ARVN::~ARVN()
 {
     // Army base class handles unitList deletion
+}
+
+Road::Road()
+{
+}
+
+void Road::getEffect(Army *army)
+{
+    // No effect on LiberationArmy or ARVN
+}
+
+Mountain::Mountain(const Position &pos) : pos(pos)
+{
+}
+
+void Mountain::getEffect(Army *army)
+{
+    if (!army || !army->getUnitList())
+        return;
+
+    int deltaLF = 0;
+    int deltaEXP = 0;
+    int radius = 0;
+    float expMultiplier = 0.0f;
+    float lfMultiplier = 0.0f;
+
+    // Determine army type and set parameters
+    if (dynamic_cast<LiberationArmy *>(army))
+    {
+        radius = 2;
+        expMultiplier = 0.3f;
+        lfMultiplier = -0.1f;
+    }
+    else if (dynamic_cast<ARVN *>(army))
+    {
+        radius = 4;
+        expMultiplier = -0.2f;
+        lfMultiplier = -0.05f;
+    }
+    else
+    {
+        return;
+    }
+    for (Unit *unit : army->getUnitList()->getAllUnits())
+    {
+        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+        {
+            if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+            {
+                deltaEXP += static_cast<int>(infantry->getAttackScore() * expMultiplier);
+            }
+            else if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+            {
+                deltaLF += static_cast<int>(vehicle->getAttackScore() * lfMultiplier);
+            }
+        }
+    }
+
+    int newLF = army->getLF() + deltaLF;
+    int newEXP = army->getEXP() + deltaEXP;
+    if (newLF > 1000)
+        newLF = 1000;
+    if (newLF < 0)
+        newLF = 0;
+    if (newEXP > 500)
+        newEXP = 500;
+    if (newEXP < 0)
+        newEXP = 0;
+    army->setLF(newLF);
+    army->setEXP(newEXP);
+}
+
+River::River(const Position &pos) : pos(pos) {}
+
+void River::getEffect(Army *army)
+{
+    if (!army || !army->getUnitList())
+        return;
+
+    int deltaEXP = 0;
+    const int radius = 2;
+    const float multiplier = -0.1f; // 10% reduction
+
+    for (Unit *unit : army->getUnitList()->getAllUnits())
+    {
+        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+        {
+            if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+            {
+                deltaEXP += static_cast<int>(infantry->getAttack0444Score() * multiplier);
+            }
+        }
+    }
+
+    int newEXP = army->getEXP() + deltaEXP;
+    if (newEXP > 500)
+        newEXP = 500;
+    if (newEXP < 0)
+        newEXP = 0;
+    army->setEXP(newEXP);
+}
+
+Urban::Urban(const Position &pos) : pos(pos) {}
+
+void Urban::getEffect(Army *army)
+{
+    if (!army || !army->getUnitList())
+        return;
+
+    int deltaLF = 0;
+    int deltaEXP = 0;
+
+    if (LiberationArmy *libArmy = dynamic_cast<LiberationArmy *>(army))
+    {
+        for (Unit *unit : army->getUnitList()->getAllUnits())
+        {
+            int distance = euclideanDistance(unit->getCurrentPosition(), pos);
+            if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+            {
+                string type = infantry->getStringType();
+                if ((type == "SPECIALFORCES" || type == "REGULARINFANTRY") && distance <= 5)
+                {
+                    int D = distance == 0 ? 1 : distance;
+                    deltaEXP += static_cast<int>(2.0 * infantry->getAttackScore() / D);
+                }
+            }
+            else if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+            {
+                if (vehicle->getStringType() == "ARTILLERY" && distance <= 2)
+                {
+                    deltaLF += static_cast<int>(vehicle->getAttackScore() * -0.5f); // 50% reduction
+                }
+            }
+        }
+    }
+    else if (dynamic_cast<ARVN *>(army))
+    {
+        for (Unit *unit : army->getUnitList()->getAllUnits())
+        {
+            int distance = euclideanDistance(unit->getCurrentPosition(), pos);
+            if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+            {
+                if (infantry->getStringType() == "REGULARINFANTRY" && distance <= 3)
+                {
+                    int D = distance == 0 ? 1 : distance;
+                    deltaEXP += static_cast<int>(3.0 * infantry->getAttackScore() / (2.0 * D));
+                }
+            }
+        }
+    }
+
+    int newLF = army->getLF() + deltaLF;
+    int newEXP = army->getEXP() + deltaEXP;
+    if (newLF > 1000)
+        newLF = 1000;
+    if (newLF < 0)
+        newLF = 0;
+    if (newEXP > 500)
+        newEXP = 500;
+    if (newEXP < 0)
+        newEXP = 0;
+    army->setLF(newLF);
+    army->setEXP(newEXP);
+}
+
+Fortification::Fortification(const Position &pos) : pos(pos)
+{
+}
+
+void Fortification::getEffect(Army *army)
+{
+    if (!army || !army->getUnitList())
+        return;
+
+    int deltaLF = 0;
+    int deltaEXP = 0;
+    const int radius = 2;
+    float multiplier = 0.0f;
+
+    if (dynamic_cast<LiberationArmy *>(army))
+    {
+        multiplier = -0.2f;
+    }
+    else if (dynamic_cast<ARVN *>(army))
+    {
+        multiplier = 0.2f;
+    }
+    else
+    {
+        return;
+    }
+
+    for (Unit *unit : army->getUnitList()->getAllUnits())
+    {
+        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+        {
+            if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+            {
+                deltaEXP += static_cast<int>(infantry->getAttackScore() * multiplier);
+            }
+            else if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+            {
+                deltaLF += static_cast<int>(vehicle->getAttackScore() * multiplier);
+            }
+        }
+    }
+
+    int newLF = army->getLF() + deltaLF;
+    int newEXP = army->getEXP() + deltaEXP;
+    if (newLF > 1000)
+        newLF = 1000;
+    if (newLF < 0)
+        newLF = 0;
+    if (newEXP > 500)
+        newEXP = 500;
+    if (newEXP < 0)
+        newEXP = 0;
+    army->setLF(newLF);
+    army->setEXP(newEXP);
+}
+
+SpecialZone::SpecialZone(const Position &pos) : pos(pos)
+{
+}
+
+void SpecialZone::getEffect(Army *army)
+{
+    if (!army || !army->getUnitList())
+        return;
+
+    int deltaLF = 0;
+    int deltaEXP = 0;
+    const int radius = 1;
+
+    for (Unit *unit : army->getUnitList()->getAllUnits())
+    {
+        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+        {
+            if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+            {
+                deltaEXP -= infantry->getAttackScore();
+            }
+            else if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+            {
+                deltaLF -= vehicle->getAttackScore();
+            }
+        }
+    }
+
+    int newLF = army->getLF() + deltaLF;
+    int newEXP = army->getEXP() + deltaEXP;
+    if (newLF > 1000)
+        newLF = 1000;
+    if (newLF < 0)
+        newLF = 0;
+    if (newEXP > 500)
+        newEXP = 500;
+    if (newEXP < 0)
+        newEXP = 0;
+    army->setLF(newLF);
+    army->setEXP(newEXP);
 }
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER
