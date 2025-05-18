@@ -446,17 +446,11 @@ string LiberationArmy::str() const
 
 LiberationArmy::~LiberationArmy() {}
 
-void LiberationArmy::removeUnits(vector<Unit *> &units)
-{
-    for (Unit *unit : units)
-    {
-        unitList->removeUnit(unit);
-    }
-}
 void LiberationArmy::removeUnit(Unit *unit)
 {
     unitList->removeUnit(unit);
 }
+
 void LiberationArmy::recalcIndices()
 {
     LF = 0;
@@ -615,7 +609,6 @@ void LiberationArmy::reinforceUnitsWithFibonacci()
         unit->setQuantity(nextFibonacci(q));
     }
 }
-
 void LiberationArmy::fight(Army *enemy, bool defense)
 {
     if (!enemy || !unitList)
@@ -673,13 +666,15 @@ void LiberationArmy::fight(Army *enemy, bool defense)
         }
         else if (hasCombInfantry && liberationLF > enemyLF)
         {
-            removeUnits(combInfantry);
+            for (Unit *unit : combInfantry)
+                removeUnit(unit);
             eliminateAllVehicles();
             confiscateEnemyUnits(enemy);
         }
         else if (hasCombVehicle && liberationEXP > enemyEXP)
         {
-            removeUnits(combVehicle);
+            for (Unit *unit : combVehicle)
+                removeUnit(unit);
             eliminateAllInfantry();
             confiscateEnemyUnits(enemy);
         }
@@ -690,7 +685,6 @@ void LiberationArmy::fight(Army *enemy, bool defense)
         recalcIndices();
     }
 }
-
 // UnitList
 UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size(0)
 {
@@ -1368,7 +1362,6 @@ BattleField::BattleField(int n_rows, int n_cols, vector<Position *> arrayForest,
         assignTerrain(pos, new SpecialZone(*pos));
     }
 }
-
 string BattleField::str() const
 {
     stringstream ss;
@@ -1631,7 +1624,7 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
         "Liberation",
         battleField);
 
-    ARVN = new ARVN(
+    arvnArmy = new ARVN(
         config->getARVNUnits(),
         config->getARVNUnitsSize(),
         "ARVN",
@@ -1640,7 +1633,7 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
 
 void HCMCampaign::run()
 {
-    if (!battleField || !liberationArmy || !ARVN || !config)
+    if (!battleField || !liberationArmy || !arvnArmy || !config)
         return;
 
     TerrainElement **terrain = battleField->getTerrain();
@@ -1653,7 +1646,7 @@ void HCMCampaign::run()
             if (terrain[i][j])
             {
                 terrain[i][j]->getEffect(liberationArmy);
-                terrain[i][j]->getEffect(ARVN);
+                terrain[i][j]->getEffect(arvnArmy);
             }
         }
     }
@@ -1661,12 +1654,12 @@ void HCMCampaign::run()
     int eventCode = config->getEventCode();
     if (eventCode < 75)
     {
-        liberationArmy->fight(ARVN, false);
+        liberationArmy->fight(arvnArmy, false);
     }
     else
     {
-        ARVN->fight(liberationArmy, false);
-        liberationArmy->fight(ARVN, false);
+        arvnArmy->fight(liberationArmy, false);
+        liberationArmy->fight(arvnArmy, false);
     }
 
     auto removeLowScoreUnits = [](Army *army)
@@ -1687,7 +1680,7 @@ void HCMCampaign::run()
         }
     };
     removeLowScoreUnits(liberationArmy);
-    removeLowScoreUnits(ARVN);
+    removeLowScoreUnits(arvnArmy);
 
     auto updateIndices = [](Army *army)
     {
@@ -1707,23 +1700,22 @@ void HCMCampaign::run()
         army->setExp(EXP > 500 ? 500 : (EXP < 0 ? 0 : EXP));
     };
     updateIndices(liberationArmy);
-    updateIndices(ARVN);
+    updateIndices(arvnArmy);
 }
-
 string HCMCampaign::printResult()
 {
     stringstream ss;
     ss << "LIBERATIONARMY[LF=" << liberationArmy->getLF()
        << ",EXP=" << liberationArmy->getExp() << "]-";
-    ss << "ARVN[LF=" << ARVN->getLF()
-       << ",EXP=" << ARVN->getExp() << "]";
+    ss << "ARVN[LF=" << arvnArmy->getLF()
+       << ",EXP=" << arvnArmy->getExp() << "]";
     return ss.str();
 }
 
 HCMCampaign::~HCMCampaign()
 {
     delete liberationArmy;
-    delete ARVN;
+    delete arvnArmy;
     delete battleField;
     delete config;
 }

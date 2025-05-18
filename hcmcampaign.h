@@ -77,14 +77,20 @@ public:
     int getExp();
     void setExp(int exp);
 };
+bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bool &isVehicle);
+vector<Position *> parseTerrainArray(const string &value);
+string trim(const string &s);
+double euclideanDistance(const Position &p1, const Position &p2);
+int nextFibonacci(int n);
+bool isSpecialNumber(int n, int k);
 
 class LiberationArmy : public Army
 {
 public:
     LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField);
-    virtual void fight(Army *enemy, bool defence = false) override;
-    virtual string str() const override;
-    void removeUnits(vector<Unit *> &units);
+    virtual ~LiberationArmy();
+    virtual string str() const;
+    virtual void fight(Army *enemy, bool defense);
     void removeUnit(Unit *unit);
     void recalcIndices();
     void confiscateEnemyUnits(Army *enemy);
@@ -94,7 +100,6 @@ public:
     void eliminateAllVehicles();
     void reduceAllUnitsWeight(int percentage);
     void reinforceUnitsWithFibonacci();
-    virtual ~LiberationArmy();
 };
 
 class ARVN : public Army
@@ -316,7 +321,7 @@ private:
     Configuration *config;
     BattleField *battleField;
     LiberationArmy *liberationArmy;
-    ARVN *ARVN;
+    ARVN *arvnArmy;
 
 public:
     HCMCampaign(const string &config_file_path);
