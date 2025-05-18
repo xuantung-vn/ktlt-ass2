@@ -70,6 +70,78 @@ double euclideanDistance(const Position &p1, const Position &p2)
     int dc = p1.getCol() - p2.getCol();
     return sqrt(dr * dr + dc * dc);
 }
+Position *parsePosition(const string &posStr)
+{
+    string cleaned = trim(posStr);
+    if (cleaned.size() < 3 || cleaned[0] != '(' || cleaned[cleaned.size() - 1] != ')')
+    {
+        return nullptr;
+    }
+    cleaned = cleaned.substr(1, cleaned.size() - 2);
+    size_t comma = cleaned.find(',');
+    if (comma == string::npos)
+        return nullptr;
+    try
+    {
+        int r = stoi(cleaned.substr(0, comma));
+        int c = stoi(cleaned.substr(comma + 1));
+        return new Position(r, c);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+
+bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bool &isVehicle)
+{
+    struct VehiclePair
+    {
+        const char *name;
+        VehicleType type;
+    };
+    struct InfantryPair
+    {
+        const char *name;
+        InfantryType type;
+    };
+
+    const VehiclePair vehiclePairs[] = {
+        {"TRUCK", TRUCK},
+        {"MORTAR", MORTAR},
+        {"ANTIAIRCRAFT", ANTIAIRCRAFT},
+        {"ARMOREDCAR", ARMOREDCAR},
+        {"APC", APC},
+        {"ARTILLERY", ARTILLERY},
+        {"TANK", TANK}};
+    const InfantryPair infantryPairs[] = {
+        {"SNIPER", SNIPER},
+        {"ANTIAIRCRAFTSQUAD", ANTIAIRCRAFTSQUAD},
+        {"MORTARSQUAD", MORTARSQUAD},
+        {"ENGINEER", ENGINEER},
+        {"SPECIALFORCES", SPECIALFORCES},
+        {"REGULARINFANTRY", REGULARINFANTRY}};
+
+    for (int i = 0; i < 7; i++)
+    {
+        if (name == vehiclePairs[i].name)
+        {
+            vType = vehiclePairs[i].type;
+            isVehicle = true;
+            return true;
+        }
+    }
+    for (int i = 0; i < 6; i++)
+    {
+        if (name == infantryPairs[i].name)
+        {
+            iType = infantryPairs[i].type;
+            isVehicle = false;
+            return true;
+        }
+    }
+    return false;
+}
 
 Unit *parseUnit(const string &unitStr)
 {
@@ -128,29 +200,6 @@ Unit *parseUnit(const string &unitStr)
     }
 }
 
-Position *parsePosition(const string &posStr)
-{
-    string cleaned = trim(posStr);
-    if (cleaned.size() < 3 || cleaned[0] != '(' || cleaned[cleaned.size() - 1] != ')')
-    {
-        return nullptr;
-    }
-    cleaned = cleaned.substr(1, cleaned.size() - 2);
-    size_t comma = cleaned.find(',');
-    if (comma == string::npos)
-        return nullptr;
-    try
-    {
-        int r = stoi(cleaned.substr(0, comma));
-        int c = stoi(cleaned.substr(comma + 1));
-        return new Position(r, c);
-    }
-    catch (...)
-    {
-        return nullptr;
-    }
-}
-
 vector<Position *> parseTerrainArray(const string &value)
 {
     vector<Position *> positions;
@@ -171,56 +220,6 @@ vector<Position *> parseTerrainArray(const string &value)
             positions.push_back(pos);
     }
     return positions;
-}
-
-bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bool &isVehicle)
-{
-    struct VehiclePair
-    {
-        const char *name;
-        VehicleType type;
-    };
-    struct InfantryPair
-    {
-        const char *name;
-        InfantryType type;
-    };
-
-    const VehiclePair vehiclePairs[] = {
-        {"TRUCK", TRUCK},
-        {"MORTAR", MORTAR},
-        {"ANTIAIRCRAFT", ANTIAIRCRAFT},
-        {"ARMOREDCAR", ARMOREDCAR},
-        {"APC", APC},
-        {"ARTILLERY", ARTILLERY},
-        {"TANK", TANK}};
-    const InfantryPair infantryPairs[] = {
-        {"SNIPER", SNIPER},
-        {"ANTIAIRCRAFTSQUAD", ANTIAIRCRAFTSQUAD},
-        {"MORTARSQUAD", MORTARSQUAD},
-        {"ENGINEER", ENGINEER},
-        {"SPECIALFORCES", SPECIALFORCES},
-        {"REGULARINFANTRY", REGULARINFANTRY}};
-
-    for (int i = 0; i < 7; i++)
-    {
-        if (name == vehiclePairs[i].name)
-        {
-            vType = vehiclePairs[i].type;
-            isVehicle = true;
-            return true;
-        }
-    }
-    for (int i = 0; i < 6; i++)
-    {
-        if (name == infantryPairs[i].name)
-        {
-            iType = infantryPairs[i].type;
-            isVehicle = false;
-            return true;
-        }
-    }
-    return false;
 }
 
 // Unit
@@ -339,7 +338,7 @@ int Infantry::personalNumber(int num, int year) const
     return total;
 }
 
-int Infantry::getAttackScore() const
+int Infantry::getAttackScore()
 {
     int typeValue = static_cast<int>(infantryType);
     int initialScore = typeValue * 56 + quantity * weight;
@@ -427,7 +426,7 @@ void Army::setLF(int lf) { LF = lf; }
 
 void Army::setExp(int exp) { EXP = exp; }
 
-UnitList *Army::getUnitList() const { return unitList; } 
+UnitList *Army::getUnitList() const { return unitList; }
 
 // LiberationArmy
 LiberationArmy::LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField)
@@ -454,7 +453,10 @@ void LiberationArmy::removeUnits(vector<Unit *> &units)
         unitList->removeUnit(unit);
     }
 }
-
+void LiberationArmy::removeUnit(Unit *unit)
+{
+    unitList->removeUnit(unit);
+}
 void LiberationArmy::recalcIndices()
 {
     LF = 0;
@@ -663,8 +665,10 @@ void LiberationArmy::fight(Army *enemy, bool defense)
 
         if (hasCombInfantry && hasCombVehicle)
         {
-            removeUnits(combInfantry);
-            removeUnits(combVehicle);
+            for (Unit *unit : combInfantry)
+                removeUnit(unit);
+            for (Unit *unit : combVehicle)
+                removeUnit(unit);
             confiscateEnemyUnits(enemy);
         }
         else if (hasCombInfantry && liberationLF > enemyLF)
@@ -884,7 +888,6 @@ void UnitList::removeUnit(Unit *unit)
             {
                 tail = prev;
             }
-            delete current->unit;
             delete current;
             size--;
             return;
@@ -893,7 +896,6 @@ void UnitList::removeUnit(Unit *unit)
         current = current->next;
     }
 }
-
 string UnitList::vehicleTypeToString(VehicleType type) const
 {
     switch (type)

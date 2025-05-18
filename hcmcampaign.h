@@ -71,7 +71,7 @@ public:
     virtual void fight(Army *enemy, bool defense = false) = 0;
     virtual string str() const = 0;
     virtual ~Army();
-    UnitList *getUnitList() const ;
+    UnitList *getUnitList() const;
     int getLF();
     void setLF(int lf);
     int getExp();
@@ -84,7 +84,8 @@ public:
     LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField);
     virtual void fight(Army *enemy, bool defence = false) override;
     virtual string str() const override;
-    void removeUnits(vector<Unit *> &units); 
+    void removeUnits(vector<Unit *> &units);
+    void removeUnit(Unit *unit);
     void recalcIndices();
     void confiscateEnemyUnits(Army *enemy);
     vector<Unit *> findSmallestInfantryCombGreaterThan(int enemyEXP);
@@ -113,11 +114,11 @@ private:
 public:
     Position(int r = 0, int c = 0);
     Position(const string &str_pos);
-    parsePosition(const string &posStr);
-    int getRow() const { return r; }
-    int getCol() const { return c; }
-    void setRow(int r) { this->r = r; }
-    void setCol(int c) { this->c = c; }
+    Position *parsePosition(const string &posStr);
+    int getRow() const;
+    int getCol() const;
+    void setRow(int r);
+    void setCol(int c);
     string str() const;
 };
 
@@ -131,13 +132,13 @@ public:
     Unit(int quantity, int weight, Position pos);
     virtual ~Unit();
     virtual int getAttackScore() = 0;
-    Position getCurrentPosition() const { return pos; }
+    Position getCurrentPosition() const;
     virtual string str() const = 0;
-    void setQuantity(int quan) { quantity = quan; }
-    void setWeight(int w) { weight = w; }
-    void setPos(Position pos) { this->pos = pos; }
-    int getQuantity() const { return quantity; }
-    int getWeight() const { return weight; }
+    void setQuantity(int quan);
+    void setWeight(int w);
+    void setPos(Position pos);
+    int getQuantity() const;
+    int getWeight() const;
 };
 
 class Vehicle : public Unit
@@ -151,7 +152,7 @@ public:
     int getAttackScore() override;
     string str() const override;
     string getStringType() const;
-    VehicleType getVehicleType() const { return vehicleType; }
+    VehicleType getVehicleType() const;
 };
 
 class Infantry : public Unit
