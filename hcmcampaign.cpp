@@ -4,11 +4,36 @@
 /// STUDENT'S ANSWER BEGINS HERE
 ////////////////////////////////////////////////////////////////////////
 
+// Helper
+int nextFibonacci(int n)
+{
+    if (n <= 1)
+        return 1;
+    int a = 1, b = 1;
+    while (b < n)
+    {
+        int temp = b;
+        b = a + b;
+        a = temp;
+    }
+    return b;
+}
 // Unit
 Unit::Unit(int quantity, int weight, const Position pos)
     : quantity(quantity), weight(weight), pos(pos) {}
 Unit::~Unit() {}
-
+Unit::setQuantity(int quan)
+{
+    quantity = quan;
+}
+Unit::setWeight(int w)
+{
+    weight = w;
+}
+Unit::setPos(Position p)
+{
+    pos = p;
+}
 Position Unit::getCurrentPosition() const
 {
     return pos;
@@ -58,59 +83,49 @@ string Vehicle::str() const
 }
 
 // Infantry
-Infantry::Infantry(InfantryType infantryType, int quantity, int weight, const Position pos)
+Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType infantryType)
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
 Infantry::~Infantry() {}
 // Kiểm tra số chính phương
-bool Infantry::isPerfectSquare(int n) const
-{
-    if (n < 0)
-        return false;
+bool Infantry::isPerfectSquare(int n) const {
+    if (n < 0) return false;
     int root = static_cast<int>(sqrt(n));
     return root * root == n;
 }
 // Kiểm tra số cá nhân
-int Infantry::digitSum(int num) const
-{
+int Infantry::digitSum(int num) const {
     int sum = 0;
-    while (num > 0)
-    {
+    while (num > 0) {
         sum += num % 10;
         num /= 10;
     }
     return sum;
 }
-int Infantry::personalNumber(int num, int year) const
-{
+int Infantry::personalNumber(int num, int year) const {
     int total = num + digitSum(year);
-    if (total >= 10)
-    {
-        return digitSum(total, 0);
+    while (total >= 10) {
+        total = digitSum(total);
     }
     return total;
 }
-int Infantry::getAttackScore()
-{
+int Infantry::getAttackScore() {
     int typeValue = static_cast<int>(infantryType);
     int initialScore = typeValue * 56 + quantity * weight;
     int extraScore = 0;
-    if (infantryType == SPECIALFORCES && isPerfectSquare(weight))
-    {
+    if (infantryType == SPECIALFORCES && isPerfectSquare(weight)) {
         extraScore = 75;
         initialScore += extraScore;
     }
-    int pNumber = personalNumber(initialScore);
-    if (pNumber > 7)
-    {
+    int pNumber = personalNumber(initialScore, 1975);
+    if (pNumber > 7) {
         quantity = static_cast<int>(quantity * 1.2);
-    }
-    else if (pNumber < 3)
-    {
+    } else if (pNumber < 3) {
         quantity = static_cast<int>(quantity * 0.9);
     }
     int finalScore = typeValue * 56 + quantity * weight + extraScore;
     return finalScore;
 }
+
 string Infantry::getStringType() const
 {
     switch (infantryType)
@@ -197,10 +212,10 @@ void LiberationArmy::recalcIndices()
 void LiberationArmy::confiscateEnemyUnits(Army *enemy)
 {
 }
-void LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
+vector<Unit *> LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
 {
 }
-void LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
+vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
 {
 }
 void LiberationArmy::eliminateAllInfantry()
@@ -209,39 +224,89 @@ void LiberationArmy::eliminateAllInfantry()
 void LiberationArmy::eliminateAllVehicles()
 {
 }
-
+void LiberationArmy::reduceAllUnitsWeight(int num)
+{
+}
+void LiberationArmy::reinforceUnitsWithFibonacci()
+{
+    // for (auto unit : unitList->getAllUnits()) {
+    //     int q = unit->getQuantity();
+    //     unit->setQuantity(nextFibonacci(q));
+    // }
+}
 LiberationArmy::fight(Army *enemy, bool defense = false)
 {
     if (defense)
     {
-        return;
+        float libreationLF = LF * 1.5;
+        float libreationEXP = EXP * 1.5;
+        float enemyLF = enemy->getLF();
+        float enemyEXP = enemy->getEXP();
+        // Victory
+        if (libreationLF >= enemyLF && libreationEXP >= enemyEXP)
+        {
+            confiscateEnemyUnits(enemy);
+            recalcIndices();
+            return;
+        }
+        // Partial loss – 10% reduction
+        if ((libreationLF < enemyLF && libreationEXP >= enemyEXP) ||
+            (libreationLF >= enemyLF && libreationEXP < enemyEXP))
+        {
+            reduceAllUnitsWeight(10);
+            recalcIndices();
+            return;
+        }
+        if (libreationLF < enemyLF && libreationEXP < enemyEXP)
+        {
+            reinforceUnitsWithFibonacci();
+            recalcIndices();
+
+            // Recalculate indices
+            libreationLF = getLF() * 1.3;
+            libreationEXP = getEXP() * 1.3;
+
+            if (libreationLF >= enemyLF && libreationEXP >= enemyEXP)
+            {
+                confiscateEnemyUnits(enemy);
+                recalcIndices();
+            }
+            else if ((libreationLF < enemyLF && libreationEXP >= enemyEXP) ||
+                     (libreationLF >= enemyLF && libreationEXP < enemyEXP))
+            {
+                reduceAllUnitsWeight(10);
+                recalcIndices();
+            }
+        }
     }
     else
     {
-        float effectiveLF = LF * 1.5;
-        float effectiveEXP = EXP * 1.5;
+        float libreationLF = LF * 1.5;
+        float libreationEXP = EXP * 1.5;
+        float enemyLF = enemy->getLF();
+        float enemyEXP = enemy->getEXP();
 
-        auto combInfantry = findSmallestInfantryCombGreaterThan(enemy->getEXP());
-        auto combVehicle = findSmallestVehicleCombGreaterThan(enemy->getLF());
+        auto combInfantry = findSmallestInfantryCombGreaterThan(enemyEXP);
+        auto combVehicle = findSmallestVehicleCombGreaterThan(enemyLF);
 
         bool hasCombInfantry = !combInfantry.empty();
         bool hasCombVehicle = !combVehicle.empty();
 
-        // Case1:  Tìm ra tổ hợp thoả mãn
+        // Case 1:  Tìm ra tổ hợp thoả mãn
         if (hasCombInfantry && hasCombVehicle)
         {
             // Xoá danh sách tổ hợp thoả mãn
             removeUnits(combInfantry);
             removeUnits(combVehicle);
-
             confiscateEnemyUnits(enemy);
             recalcIndices();
         }
+        // Case 2:  Tìm ra 1 tổ hợp thoả mãn
         else if (hasCombInfantry || hasCombVehicle)
         {
             if (hasCombInfantry)
             {
-                if (LF > enemy->getLF())
+                if (libreationLF > enemyLF)
                 {
                     removeUnits(combInfantry);
                     eliminateAllVehicles();
@@ -257,7 +322,7 @@ LiberationArmy::fight(Army *enemy, bool defense = false)
             }
             else
             {
-                if (EXP > enemy->getExp())
+                if (libreationEXP > enemyEXP)
                 {
                     removeUnits(combVehicle);
                     eliminateAllInfantry();
@@ -271,7 +336,9 @@ LiberationArmy::fight(Army *enemy, bool defense = false)
                     recalcIndices();
                 }
             }
-        }else{
+        }
+        else
+        {
             reduceAllUnitsWeight(10);
             recalcIndices();
         }

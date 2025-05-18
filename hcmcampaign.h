@@ -92,9 +92,9 @@ public:
     // Xoá đơn vị
     void removeUnits(Unit unit);
     // Tìm tổ hợp bộ binh nhỏ nhất có sức mạnh lớn hơn
-    void findSmallestInfantryCombGreaterThan(int enemyExp);
+    vector<Unit *> findSmallestInfantryCombGreaterThan(int enemyExp);
     // Tìm tổ hợp phương tiện nhỏ nhất có sức mạnh lớn hơn
-    void findSmallestVehicleCombGreaterThan(int enemyLF);
+    vector<Unit *> findSmallestVehicleCombGreaterThan(int enemyLF);
     // Tịch thu chiến lợi phẩm
     void confiscateEnemyUnits(Army *enemy);
     // Loại bỏ toàn bộ bộ binh
@@ -105,7 +105,10 @@ public:
     void recalcIndices();
     // Giảm toàn bộ sức mạnh quân đội
     void reduceAllUnitsWeight(int num);
-    reduceAllUnitsWeight virtual ~LiberationArmy();
+    // Tăng sức mạnh quân đội lên số Fibonaci gần nhất
+    void reinforceUnitsWithFibonacci();
+
+    virtual ~LiberationArmy();
 };
 class Position
 {
@@ -134,6 +137,9 @@ public:
     virtual int getAttackScore() = 0;
     Position getCurrentPosition() const;
     virtual string str() const = 0;
+    void setQuantity(int quan);
+    void setWeight(int w);
+    void setPos(Position pos);
 };
 class Vehicle : public Unit
 {
