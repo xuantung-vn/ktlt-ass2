@@ -4,7 +4,16 @@
 /// STUDENT'S ANSWER BEGINS HERE
 ////////////////////////////////////////////////////////////////////////
 
+// Unit
+Unit::Unit(int quantity, int weight,const Position pos)
+    : quantity(quantity), weight(weight), pos(pos) {}
+Unit::~Unit() {}
 
+// Getter: trả về vị trí hiện tại
+Position Unit::getCurrentPosition() const {
+    return pos;
+}
+// Position
 
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER
