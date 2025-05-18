@@ -44,7 +44,6 @@ Vehicle::Vehicle(VehicleType vehicleType, int quantity, int weight, const Positi
     : Unit(quantity, weight, pos), vehicleType(vehicleType) {}
 
 Vehicle::~Vehicle() {}
-
 int Vehicle::getAttackScore()
 {
     return static_cast<int>(vehicleType) * 304 + (quantity * weight) / 30;
@@ -212,151 +211,243 @@ string LiberationArmy::str() const
 {
     return "LiberationArmy: " + name + " (LF=" + to_string(LF) + ", EXP=" + to_string(EXP) + ")";
 }
-LiberationArmy::~LiberationArmy() {}
+LiberationArmy::~LiberationArmy()
+{ // unitList is deleted by base class Army
+}
 
-void LiberationArmy::removeUnits(Unit unit)
+void LiberationArmy::removeUnits(const vector<Unit *> &units)
 {
+    for (Unit *unit : units)
+    {
+        unitList->removeUnit(unit);
+    }
 }
 void LiberationArmy::recalcIndices()
 {
+    LF = 0;
+    EXP = 0;
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+        {
+            LF += vehicle->getAttackScore();
+            if (LF > 1000)
+                LF = 1000;
+            if (LF < 0)
+                LF = 0;
+        }
+        else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+        {
+            EXP += infantry->getAttackScore();
+            if (EXP > 500)
+                EXP = 500;
+            if (EXP < 0)
+                EXP = 0;
+        }
+    }
 }
 void LiberationArmy::confiscateEnemyUnits(Army *enemy)
 {
-}
-vector<Unit *> LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
-{
+    for (Unit *unit : enemy->unitList->getAllUnits())
+    {
+        unitList->insert(unit);
+    }
+    enemy->unitList->clear();
+    enemy->setLF(0);
+    enemy->setExp(0);
 }
 vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
 {
+    vector<Unit *> infantry;
+    vector<Unit *> result;
+    int minScore = INT_MAX;
+
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        if (dynamic_cast<Infantry *>(unit))
+        {
+            infantry.push_back(unit);
+        }
+    }
+
+    int n = infantry.size();
+    for (int mask = 1; mask < (1 << n); mask++)
+    {
+        int score = 0;
+        vector<Unit *> temp;
+        for (int i = 0; i < n; i++)
+        {
+            if (mask & (1 << i))
+            {
+                score += dynamic_cast<Infantry *>(infantry[i])->getAttackScore();
+                temp.push_back(infantry[i]);
+            }
+        }
+        if (score > enemyEXP && score < minScore)
+        {
+            minScore = score;
+            result = temp;
+        }
+    }
+    return result;
+}
+vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
+{
+    vector<Unit *> infantry;
+    vector<Unit *> result;
+    int minScore = INT_MAX;
+
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        if (dynamic_cast<Infantry *>(unit))
+        {
+            infantry.push_back(unit);
+        }
+    }
+
+    int n = infantry.size();
+    for (int mask = 1; mask < (1 << n); mask++)
+    {
+        int score = 0;
+        vector<Unit *> temp;
+        for (int i = 0; i < n; i++)
+        {
+            if (mask & (1 << i))
+            {
+                score += dynamic_cast<Infantry *>(infantry[i])->getAttackScore();
+                temp.push_back(infantry[i]);
+            }
+        }
+        if (score > enemyEXP && score < minScore)
+        {
+            minScore = score;
+            result = temp;
+        }
+    }
+    return result;
 }
 void LiberationArmy::eliminateAllInfantry()
 {
+    vector<Unit *> toRemove;
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        if (dynamic_cast<Infantry *>(unit))
+        {
+            toRemove.push_back(unit);
+        }
+    }
+    for (Unit *unit : toRemove)
+    {
+        unitList->removeUnit(unit);
+    }
 }
 void LiberationArmy::eliminateAllVehicles()
 {
+    vector<Unit *> toRemove;
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        if (dynamic_cast<Vehicle *>(unit))
+        {
+            toRemove.push_back(unit);
+        }
+    }
+    for (Unit *unit : toRemove)
+    {
+        unitList->removeUnit(unit);
+    }
 }
-void LiberationArmy::reduceAllUnitsWeight(int num)
+void LiberationArmy::reduceAllUnitsWeight(int percentage)
 {
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        int currentWeight = unit->getWeight();
+        int newWeight = currentWeight * (100 - percentage) / 100;
+        unit->setWeight(newWeight);
+    }
 }
+
 void LiberationArmy::reinforceUnitsWithFibonacci()
 {
-    // for (auto unit : unitList->getAllUnits()) {
-    //     int q = unit->getQuantity();
-    //     unit->setQuantity(nextFibonacci(q));
-    // }
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        int q = unit->getQuantity();
+        unit->setQuantity(nextFibonacci(q));
+    }
 }
-void LiberationArmy::fight(Army *enemy, bool defense = false)
-
+void LiberationArmy::fight(Army *enemy, bool defense)
 {
+    if (!enemy)
+        return; // Handle null enemy
+
+    float liberationLF = LF * (defense ? 1.3 : 1.5);
+    float liberationEXP = EXP * (defense ? 1.3 : 1.5);
+    float enemyLF = enemy->getLF();
+    float enemyEXP = enemy->getEXP();
+
     if (defense)
     {
-        float libreationLF = LF * 1.5;
-        float libreationEXP = EXP * 1.5;
-        float enemyLF = enemy->getLF();
-        float enemyEXP = enemy->getEXP();
         // Victory
-        if (libreationLF >= enemyLF && libreationEXP >= enemyEXP)
+        if (liberationLF >= enemyLF && liberationEXP >= enemyEXP)
         {
             confiscateEnemyUnits(enemy);
             recalcIndices();
             return;
         }
-        // Partial loss – 10% reduction
-        if ((libreationLF < enemyLF && libreationEXP >= enemyEXP) ||
-            (libreationLF >= enemyLF && libreationEXP < enemyEXP))
-        {
-            reduceAllUnitsWeight(10);
-            recalcIndices();
-            return;
-        }
-        if (libreationLF < enemyLF && libreationEXP < enemyEXP)
+        // Partial loss or defeat
+        if (liberationLF < enemyLF && liberationEXP < enemyEXP)
         {
             reinforceUnitsWithFibonacci();
             recalcIndices();
-
-            // Recalculate indices
-            libreationLF = getLF() * 1.3;
-            libreationEXP = getEXP() * 1.3;
-
-            if (libreationLF >= enemyLF && libreationEXP >= enemyEXP)
+            liberationLF = getLF() * 1.3;
+            liberationEXP = getEXP() * 1.3;
+            if (liberationLF >= enemyLF && liberationEXP >= enemyEXP)
             {
                 confiscateEnemyUnits(enemy);
-                recalcIndices();
             }
-            else if ((libreationLF < enemyLF && libreationEXP >= enemyEXP) ||
-                     (libreationLF >= enemyLF && libreationEXP < enemyEXP))
+            else
             {
                 reduceAllUnitsWeight(10);
-                recalcIndices();
             }
         }
+        else
+        {
+            reduceAllUnitsWeight(10);
+        }
+        recalcIndices();
     }
     else
     {
-        float libreationLF = LF * 1.5;
-        float libreationEXP = EXP * 1.5;
-        float enemyLF = enemy->getLF();
-        float enemyEXP = enemy->getEXP();
-
         auto combInfantry = findSmallestInfantryCombGreaterThan(enemyEXP);
         auto combVehicle = findSmallestVehicleCombGreaterThan(enemyLF);
 
         bool hasCombInfantry = !combInfantry.empty();
         bool hasCombVehicle = !combVehicle.empty();
 
-        // Case 1:  Tìm ra tổ hợp thoả mãn
         if (hasCombInfantry && hasCombVehicle)
         {
-            // Xoá danh sách tổ hợp thoả mãn
             removeUnits(combInfantry);
             removeUnits(combVehicle);
             confiscateEnemyUnits(enemy);
-            recalcIndices();
         }
-        // Case 2:  Tìm ra 1 tổ hợp thoả mãn
-        else if (hasCombInfantry || hasCombVehicle)
+        else if (hasCombInfantry && liberationLF > enemyLF)
         {
-            if (hasCombInfantry)
-            {
-                if (libreationLF > enemyLF)
-                {
-                    removeUnits(combInfantry);
-                    eliminateAllVehicles();
-                    confiscateEnemyUnits(enemy);
-                    recalcIndices();
-                }
-                else
-                {
-                    // No battle
-                    reduceAllUnitsWeight(10);
-                    recalcIndices();
-                }
-            }
-            else
-            {
-                if (libreationEXP > enemyEXP)
-                {
-                    removeUnits(combVehicle);
-                    eliminateAllInfantry();
-                    confiscateEnemyUnits(enemy);
-                    recalcIndices();
-                }
-                else
-                {
-                    // No battle
-                    reduceAllUnitsWeight(10);
-                    recalcIndices();
-                }
-            }
+            removeUnits(combInfantry);
+            eliminateAllVehicles();
+            confiscateEnemyUnits(enemy);
+        }
+        else if (hasCombVehicle && liberationEXP > enemyEXP)
+        {
+            removeUnits(combVehicle);
+            eliminateAllInfantry();
+            confiscateEnemyUnits(enemy);
         }
         else
         {
             reduceAllUnitsWeight(10);
-            recalcIndices();
         }
+        recalcIndices();
     }
 }
-
 // Unit List
 UnitList::UnitList(int capacity) : capacity(capacity), size(0)
 {
