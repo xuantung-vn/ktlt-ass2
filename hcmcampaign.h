@@ -106,7 +106,19 @@ public:
     Position getCurrentPosition() const;
     virtual string str() const = 0;
 };
+class Vehicle : public Unit
+{
+private:
+    VehicleType vehicleType;
 
+public:
+    Vehicle(VehicleType vehicleType, int quantity, int weight, const Position pos);
+    ~Vehicle();
+
+    int getAttackScore() override;
+    string str() const override;
+    string getStringType() const;
+};
 class UnitList
 {
 private:
