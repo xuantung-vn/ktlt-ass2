@@ -173,15 +173,24 @@ public:
 class UnitList
 {
 private:
+    Unit **units;
     int capacity;
-    // TODO
+    int size;
+
 public:
     UnitList(int capacity);
     bool insert(Unit *unit);                   // return true if insert successfully
     bool isContain(VehicleType vehicleType);   // return true if it exists
     bool isContain(InfantryType infantryType); // return true if it exists
     string str() const;
-    // TODO
+    vector<Unit *> getAllUnits() const;
+    void removeUnit(Unit *unit) const
+        void clear();
+    ~UnitList();
+
+private:
+    string vehicleTypeToString(Vehicle type) const
+        string infantryTypeToString(InfantryType type) const
 };
 
 class TerrainElement

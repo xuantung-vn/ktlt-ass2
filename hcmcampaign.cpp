@@ -87,39 +87,50 @@ Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType in
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
 Infantry::~Infantry() {}
 // Kiểm tra số chính phương
-bool Infantry::isPerfectSquare(int n) const {
-    if (n < 0) return false;
+bool Infantry::isPerfectSquare(int n) const
+{
+    if (n < 0)
+        return false;
     int root = static_cast<int>(sqrt(n));
     return root * root == n;
 }
 // Kiểm tra số cá nhân
-int Infantry::digitSum(int num) const {
+int Infantry::digitSum(int num) const
+{
     int sum = 0;
-    while (num > 0) {
+    while (num > 0)
+    {
         sum += num % 10;
         num /= 10;
     }
     return sum;
 }
-int Infantry::personalNumber(int num, int year) const {
+int Infantry::personalNumber(int num, int year) const
+{
     int total = num + digitSum(year);
-    while (total >= 10) {
+    while (total >= 10)
+    {
         total = digitSum(total);
     }
     return total;
 }
-int Infantry::getAttackScore() {
+int Infantry::getAttackScore()
+{
     int typeValue = static_cast<int>(infantryType);
     int initialScore = typeValue * 56 + quantity * weight;
     int extraScore = 0;
-    if (infantryType == SPECIALFORCES && isPerfectSquare(weight)) {
+    if (infantryType == SPECIALFORCES && isPerfectSquare(weight))
+    {
         extraScore = 75;
         initialScore += extraScore;
     }
     int pNumber = personalNumber(initialScore, 1975);
-    if (pNumber > 7) {
+    if (pNumber > 7)
+    {
         quantity = static_cast<int>(quantity * 1.2);
-    } else if (pNumber < 3) {
+    }
+    else if (pNumber < 3)
+    {
         quantity = static_cast<int>(quantity * 0.9);
     }
     int finalScore = typeValue * 56 + quantity * weight + extraScore;
@@ -234,7 +245,8 @@ void LiberationArmy::reinforceUnitsWithFibonacci()
     //     unit->setQuantity(nextFibonacci(q));
     // }
 }
-LiberationArmy::fight(Army *enemy, bool defense = false)
+void LiberationArmy::fight(Army *enemy, bool defense = false)
+
 {
     if (defense)
     {
@@ -345,6 +357,152 @@ LiberationArmy::fight(Army *enemy, bool defense = false)
     }
 }
 
+// Unit List
+UnitList::UnitList(int capacity) : capacity(capacity), size(0)
+{
+    units = new Unit *[capacity];
+}
+
+UnitList::~UnitList()
+{
+    for (int i = 0; i < size; i++)
+    {
+        delete units[i]; // Assume UnitList owns the units
+    }
+    delete[] units;
+}
+bool UnitList::isContain(VehicleType vehicleType)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(units[i]))
+        {
+            if (vehicle->getStringType() == vehicleTypeToString(vehicleType))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+bool UnitList::insert(Unit *unit)
+{
+    if (size >= capacity)
+        return false;
+    units[size++] = unit;
+    return true;
+}
+bool UnitList::isContain(InfantryType infantryType)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (Infantry *infantry = dynamic_cast<Infantry *>(units[i]))
+        {
+            if (infantry->getStringType() == infantryTypeToString(infantryType))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+string UnitList::str() const
+{
+    stringstream ss;
+    ss << "UnitList[";
+    for (int i = 0; i < size; i++)
+    {
+        ss << units[i]->str();
+        if (i < size - 1)
+            ss << ",";
+    }
+    ss << "]";
+    return ss.str();
+}
+vector<Unit *> UnitList::getAllUnits() const
+{
+    vector<Unit *> result;
+    for (int i = 0; i < size; i++)
+    {
+        result.push_back(units[i]);
+    }
+    return result;
+}
+
+void UnitList::removeUnit(Unit *unit)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (units[i] == unit)
+        {
+            for (int j = i; j < size - 1; j++)
+            {
+                units[j] = units[j + 1];
+            }
+            size--;
+            break;
+        }
+    }
+}
+void UnitList::clear()
+{
+    for (int i = 0; i < size; i++)
+    {
+        delete units[i];
+    }
+    size = 0;
+}
+void UnitList::clear()
+{
+    for (int i = 0; i < size; i++)
+    {
+        delete units[i];
+    }
+    size = 0;
+}
+string UnitList::vehicleTypeToString(VehicleType type) const
+{
+    switch (type)
+    {
+    case TRUCK:
+        return "TRUCK";
+    case MORTAR:
+        return "MORTAR";
+    case ANTIAIRCRAFT:
+        return "ANTIAIRCRAFT";
+    case ARMOREDCAR:
+        return "ARMOREDCAR";
+    case APC:
+        return "APC";
+    case ARTILLERY:
+        return "ARTILLERY";
+    case TANK:
+        return "TANK";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+string UnitList::infantryTypeToString(InfantryType type) const
+{
+    switch (type)
+    {
+    case SNIPER:
+        return "SNIPER";
+    case ANTIAIRCRAFTSQUAD:
+        return "ANTIAIRCRAFTSQUAD";
+    case MORTARSQUAD:
+        return "MORTARSQUAD";
+    case ENGINEER:
+        return "ENGINEER";
+    case SPECIALFORCES:
+        return "SPECIALFORCES";
+    case REGULARINFANTRY:
+        return "REGULARINFANTRY";
+    default:
+        return "UNKNOWN";
+    }
+}
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER
 ////////////////////////////////////////////////
