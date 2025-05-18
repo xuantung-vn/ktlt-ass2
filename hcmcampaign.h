@@ -19,18 +19,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 // Forward declaration
-class Unit;
-class UnitList;
-class Army;
 class TerrainElement;
-
-class Vehicle;
-class Infantry;
-
-class LiberationArmy;
-class ARVN;
-
-class Position;
 
 class Road;
 class Mountain;
@@ -77,7 +66,7 @@ public:
     virtual void fight(Army *enemy, bool defense = false) = 0;
     virtual string str() const = 0;
     virtual ~Army();
-    UnitList* getUnitList() const { return unitList; }
+    UnitList *getUnitList() const { return unitList; }
     int getLF();
     void setLF(int lf);
     int getExp();
@@ -111,7 +100,14 @@ public:
 
     virtual ~LiberationArmy();
 };
-class Position
+class ARVN : public Army
+{
+public:
+    ARVN(const Unit **unitArray, int size, string name, BattleField *battleField);
+    void fight(Army *enemy, bool defense);
+    void ~ARVN();
+    string str() const;
+} class Position
 {
 private:
     int r, c;
@@ -168,7 +164,7 @@ private:
 public:
     Infantry(int quantity, int weight, const Position pos, InfantryType infantryType);
     ~Infantry();
-    int getAttackScore()const override;
+    int getAttackScore() const override;
     string str() const override;
     string getStringType() const;
 

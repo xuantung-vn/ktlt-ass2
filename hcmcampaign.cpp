@@ -18,24 +18,32 @@ int nextFibonacci(int n)
     }
     return b;
 }
+
 // Unit
 Unit::Unit(int quantity, int weight, const Position pos)
     : quantity(quantity), weight(weight), pos(pos) {}
+
 Unit::~Unit() {}
+
 Unit::setQuantity(int quan)
 {
     quantity = quan;
 }
+
 Unit::setWeight(int w)
 {
     weight = w;
 }
+
 int Unit::getWeight() const { return weight; }
+
 int Unit::getQuantity() const { return quantity; }
+
 Unit::setPos(Position p)
 {
     pos = p;
 }
+
 Position Unit::getCurrentPosition() const
 {
     return pos;
@@ -46,10 +54,12 @@ Vehicle::Vehicle(VehicleType vehicleType, int quantity, int weight, const Positi
     : Unit(quantity, weight, pos), vehicleType(vehicleType) {}
 
 Vehicle::~Vehicle() {}
+
 int Vehicle::getAttackScore()
 {
     return static_cast<int>(vehicleType) * 304 + (quantity * weight) / 30;
 }
+
 string Vehicle::getStringType() const
 {
     switch (vehicleType)
@@ -72,6 +82,7 @@ string Vehicle::getStringType() const
         return "UNKNOWN";
     }
 }
+
 string Vehicle::str() const
 {
     stringstream ss;
@@ -82,12 +93,15 @@ string Vehicle::str() const
        << "]";
     return ss.str();
 }
+
 VehicleType Vehicle::getVehicleType() const { return vehicleType; }
 
 // Infantry
 Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType infantryType)
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
+
 Infantry::~Infantry() {}
+
 // Kiểm tra số chính phương
 bool Infantry::isPerfectSquare(int n) const
 {
@@ -96,6 +110,7 @@ bool Infantry::isPerfectSquare(int n) const
     int root = static_cast<int>(sqrt(n));
     return root * root == n;
 }
+
 // Kiểm tra số cá nhân
 int Infantry::digitSum(int num) const
 {
@@ -107,6 +122,7 @@ int Infantry::digitSum(int num) const
     }
     return sum;
 }
+
 int Infantry::personalNumber(int num, int year) const
 {
     int total = num + digitSum(year);
@@ -116,6 +132,7 @@ int Infantry::personalNumber(int num, int year) const
     }
     return total;
 }
+
 int Infantry::getAttackScore() const
 {
     int typeValue = static_cast<int>(infantryType);
@@ -159,6 +176,7 @@ string Infantry::getStringType() const
         return "UNKNOWN";
     }
 }
+
 string Infantry::str() const
 {
     stringstream ss;
@@ -201,18 +219,25 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
         }
     }
 }
+
 Army::~Army() { delete unitList; }
+
 int Army::getLF() { return LF; }
+
 int Army::getExp() { return EXP; }
+
 void Army::setLF(int lf) { LF = lf; }
+
 void Army::setExp(int exp) { EXP = exp; }
 
 // LiberationArmy
 LiberationArmy::LiberationArmy(const Unit **unitArray, int size, string name, BattleField *battleField) : Army(unitArray, size, name, battleField) {}
+
 string LiberationArmy::str() const
 {
     return "LiberationArmy: " + name + " (LF=" + to_string(LF) + ", EXP=" + to_string(EXP) + ")";
 }
+
 LiberationArmy::~LiberationArmy()
 { // unitList is deleted by base class Army
 }
@@ -224,6 +249,7 @@ void LiberationArmy::removeUnits(const vector<Unit *> &units)
         unitList->removeUnit(unit);
     }
 }
+
 void LiberationArmy::recalcIndices()
 {
     LF = 0;
@@ -248,6 +274,7 @@ void LiberationArmy::recalcIndices()
         }
     }
 }
+
 void LiberationArmy::confiscateEnemyUnits(Army *enemy)
 {
     for (Unit *unit : enemy->unitList->getAllUnits())
@@ -258,6 +285,7 @@ void LiberationArmy::confiscateEnemyUnits(Army *enemy)
     enemy->setLF(0);
     enemy->setExp(0);
 }
+
 vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
 {
     vector<Unit *> infantry;
@@ -293,6 +321,7 @@ vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
     }
     return result;
 }
+
 vector<Unit *> LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
 {
     vector<Unit *> vehicles;
@@ -328,6 +357,7 @@ vector<Unit *> LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
     }
     return result;
 }
+
 void LiberationArmy::eliminateAllInfantry()
 {
     vector<Unit *> toRemove;
@@ -343,6 +373,7 @@ void LiberationArmy::eliminateAllInfantry()
         unitList->removeUnit(unit);
     }
 }
+
 void LiberationArmy::eliminateAllVehicles()
 {
     vector<Unit *> toRemove;
@@ -358,6 +389,7 @@ void LiberationArmy::eliminateAllVehicles()
         unitList->removeUnit(unit);
     }
 }
+
 void LiberationArmy::reduceAllUnitsWeight(int percentage)
 {
     for (Unit *unit : unitList->getAllUnits())
@@ -376,6 +408,7 @@ void LiberationArmy::reinforceUnitsWithFibonacci()
         unit->setQuantity(nextFibonacci(q));
     }
 }
+
 void LiberationArmy::fight(Army *enemy, bool defense)
 {
     if (!enemy)
@@ -450,6 +483,7 @@ void LiberationArmy::fight(Army *enemy, bool defense)
         recalcIndices();
     }
 }
+
 // Unit List
 UnitList::UnitList(int capacity) : capacity(capacity), size(0)
 {
@@ -464,6 +498,7 @@ UnitList::~UnitList()
     }
     delete[] units;
 }
+
 bool UnitList::isContain(VehicleType vehicleType)
 {
     for (int i = 0; i < size; i++)
@@ -478,6 +513,7 @@ bool UnitList::isContain(VehicleType vehicleType)
     }
     return false;
 }
+
 bool UnitList::isContain(InfantryType infantryType)
 {
     for (int i = 0; i < size; i++)
@@ -492,6 +528,7 @@ bool UnitList::isContain(InfantryType infantryType)
     }
     return false;
 }
+
 bool UnitList::insert(Unit *unit)
 {
     if (size >= capacity)
@@ -499,19 +536,42 @@ bool UnitList::insert(Unit *unit)
     units[size++] = unit;
     return true;
 }
+
 string UnitList::str() const
 {
     stringstream ss;
-    ss << "UnitList[";
+    int vehicleCount = 0;
+    int infantryCount = 0;
+
+    for (int i = 0; i < size; i++)
+    {
+        if (dynamic_cast<Vehicle *>(units[i]))
+        {
+            vehicleCount++;
+        }
+        else if (dynamic_cast<Infantry *>(units[i]))
+        {
+            infantryCount++;
+        }
+    }
+
+    ss << "UnitList[count_vehicle=" << vehicleCount
+       << ";count_infantry=" << infantryCount << ";";
+
+    // Append unit list
     for (int i = 0; i < size; i++)
     {
         ss << units[i]->str();
         if (i < size - 1)
+        {
             ss << ",";
+        }
     }
+
     ss << "]";
     return ss.str();
 }
+
 vector<Unit *> UnitList::getAllUnits() const
 {
     vector<Unit *> result;
@@ -537,6 +597,7 @@ void UnitList::removeUnit(Unit *unit)
         }
     }
 }
+
 void UnitList::clear()
 {
     for (int i = 0; i < size; i++)
@@ -545,14 +606,7 @@ void UnitList::clear()
     }
     size = 0;
 }
-void UnitList::clear()
-{
-    for (int i = 0; i < size; i++)
-    {
-        delete units[i];
-    }
-    size = 0;
-}
+
 string UnitList::vehicleTypeToString(VehicleType type) const
 {
     switch (type)
@@ -595,6 +649,161 @@ string UnitList::infantryTypeToString(InfantryType type) const
     default:
         return "UNKNOWN";
     }
+}
+
+// Position
+Position::Position(int r, int c) : r(r), c(c) {}
+Position::Position(const string &str_pos)
+{
+    string cleaned = str_pos;
+    cleaned.erase(remove(cleaned.begin(), cleaned.end(), ' '), cleaned.end());
+    if (cleaned.size() < 3 || cleaned[0] != '(' || cleaned[cleaned.size() - 1] != ')')
+    {
+        r = 0;
+        c = 0;
+        return;
+    }
+    string inner = cleaned.substr(1, cleaned.size() - 2); // Remove ( and )
+    size_t comma = inner.find(',');
+    if (comma == string::npos)
+    {
+        r = 0;
+        c = 0;
+        return;
+    }
+    try
+    {
+        r = stoi(inner.substr(0, comma));
+        c = stoi(inner.substr(comma + 1));
+    }
+    catch (...)
+    {
+        r = 0;
+        c = 0;
+    }
+}
+
+int Position::getRow() const
+{
+    return r;
+}
+
+int Position::getCol() const
+{
+    return c;
+}
+
+void Position::setRow(int r)
+{
+    this->r = r;
+}
+
+void Position::setCol(int c)
+{
+    this->c = c;
+}
+
+string Position::str() const
+{
+    stringstream ss;
+    ss << "(" << r << "," << c << ")";
+    return ss.str();
+}
+
+// ARVN
+ARVN::ARVN(const Unit **unitArray, int size, string name, BattleField *battleField)
+    : Army(const_cast<Unit **>(unitArray), size, name, battleField)
+{
+}
+void ARVN::fight(Army *enemy, bool defense)
+{
+    if (!enemy || !unitList)
+        return;
+
+    if (!defense)
+    {
+        vector<Unit *> toRemove;
+        for (Unit *unit : unitList->getAllUnits())
+        {
+            int currentQuantity = unit->getQuantity();
+            if (currentQuantity <= 1)
+            {
+                toRemove.push_back(unit);
+                continue;
+            }
+            int newQuantity = static_cast<int>(currentQuantity * 0.8);
+            if (newQuantity < 1)
+                newQuantity = 1;
+            unit->setQuantity(newQuantity);
+            if (newQuantity == 1)
+            {
+                toRemove.push_back(unit);
+            }
+        }
+        for (Unit *unit : toRemove)
+        {
+            unitList->removeUnit(unit);
+        }
+    }
+    else
+    {
+        LiberationArmy *libArmy = dynamic_cast<LiberationArmy *>(enemy);
+        if (libArmy)
+        {
+            libArmy->fight(this, false);
+            if (unitList->getAllUnits().empty())
+            {
+                setLF(0);
+                setEXP(0);
+                return;
+            }
+            for (Unit *unit : unitList->getAllUnits())
+            {
+                int currentWeight = unit->getWeight();
+                int newWeight = static_cast<int>(currentWeight * 0.8);
+                if (newWeight < 1)
+                    newWeight = 1;
+                unit->setWeight(newWeight);
+            }
+        }
+    }
+    LF = 0;
+    EXP = 0;
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+        {
+            LF += vehicle->getAttackScore();
+        }
+        else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+        {
+            EXP += infantry->getAttackScore();
+        }
+    }
+    if (LF > 1000)
+        LF = 1000;
+    if (LF < 0)
+        LF = 0;
+    if (EXP > 500)
+        EXP = 500;
+    if (EXP < 0)
+        EXP = 0;
+}
+
+string ARVN::str() const
+{
+    stringstream ss;
+    ss << "ARVN[name=" << name
+       << ",LF=" << LF
+       << ",EXP=" << EXP
+       << ",unitList=" << (unitList ? unitList->str() : "null")
+       << ",battleField=" << battleField
+       << "]";
+    return ss.str();
+}
+ARVN::~ARVN()
+{
+    // Army base class handles unitList deletion
 }
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER
