@@ -71,7 +71,7 @@ public:
     virtual void fight(Army *enemy, bool defense = false) = 0;
     virtual string str() const = 0;
     virtual ~Army();
-    UnitList *getUnitList() const { return unitList; }
+    UnitList *getUnitList() const ;
     int getLF();
     void setLF(int lf);
     int getExp();
@@ -84,6 +84,15 @@ public:
     LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField);
     virtual void fight(Army *enemy, bool defence = false) override;
     virtual string str() const override;
+    void removeUnits(vector<Unit *> &units); 
+    void recalcIndices();
+    void confiscateEnemyUnits(Army *enemy);
+    vector<Unit *> findSmallestInfantryCombGreaterThan(int enemyEXP);
+    vector<Unit *> findSmallestVehicleCombGreaterThan(int enemyLF);
+    void eliminateAllInfantry();
+    void eliminateAllVehicles();
+    void reduceAllUnitsWeight(int percentage);
+    void reinforceUnitsWithFibonacci();
     virtual ~LiberationArmy();
 };
 
@@ -104,6 +113,7 @@ private:
 public:
     Position(int r = 0, int c = 0);
     Position(const string &str_pos);
+    parsePosition(const string &posStr);
     int getRow() const { return r; }
     int getCol() const { return c; }
     void setRow(int r) { this->r = r; }

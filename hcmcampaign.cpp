@@ -18,6 +18,7 @@ int nextFibonacci(int n)
     }
     return b;
 }
+
 bool isSpecialNumber(int n, int k)
 {
     if (n < 0)
@@ -47,6 +48,7 @@ bool isSpecialNumber(int n, int k)
     }
     return false;
 }
+
 string trim(const string &s)
 {
     string result = s;
@@ -61,12 +63,14 @@ string trim(const string &s)
     result.erase(end);
     return result;
 }
+
 double euclideanDistance(const Position &p1, const Position &p2)
 {
     int dr = p1.getRow() - p2.getRow();
     int dc = p1.getCol() - p2.getCol();
     return sqrt(dr * dr + dc * dc);
 }
+
 Unit *parseUnit(const string &unitStr)
 {
     string cleaned = trim(unitStr);
@@ -109,11 +113,11 @@ Unit *parseUnit(const string &unitStr)
         Unit *unit = nullptr;
         if (isVehicle)
         {
-            unit = new Vehicle(vType, quantity, weight, *pos);
+            unit = new Vehicle(quantity, weight, *pos, vType);
         }
         else
         {
-            unit = new Infantry(iType, quantity, weight, *pos);
+            unit = new Infantry(quantity, weight, *pos, iType);
         }
         delete pos;
         return unit;
@@ -123,7 +127,6 @@ Unit *parseUnit(const string &unitStr)
         return nullptr;
     }
 }
-
 
 Position *parsePosition(const string &posStr)
 {
@@ -198,6 +201,7 @@ bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bo
         {"ENGINEER", ENGINEER},
         {"SPECIALFORCES", SPECIALFORCES},
         {"REGULARINFANTRY", REGULARINFANTRY}};
+
     for (int i = 0; i < 7; i++)
     {
         if (name == vehiclePairs[i].name)
@@ -225,6 +229,8 @@ Unit::Unit(int quantity, int weight, const Position pos)
 
 Unit::~Unit() {}
 
+int Unit::getAttackScore() { return 0; } // Virtual method for HCMCampaign::run
+
 void Unit::setQuantity(int quan)
 {
     quantity = quan;
@@ -250,7 +256,7 @@ Position Unit::getCurrentPosition() const
 }
 
 // Vehicle
-Vehicle::Vehicle( int quantity, int weight, const Position pos,VehicleType vehicleType)
+Vehicle::Vehicle(int quantity, int weight, const Position pos, VehicleType vehicleType)
     : Unit(quantity, weight, pos), vehicleType(vehicleType) {}
 
 Vehicle::~Vehicle() {}
@@ -297,7 +303,7 @@ string Vehicle::str() const
 VehicleType Vehicle::getVehicleType() const { return vehicleType; }
 
 // Infantry
-Infantry::Infantry( int quantity, int weight, const Position pos, InfantryType infantryType)
+Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType infantryType)
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
 
 Infantry::~Infantry() {}
@@ -415,11 +421,13 @@ Army::~Army() { delete unitList; }
 
 int Army::getLF() { return LF; }
 
-int Army::getExp(){ return EXP; };
+int Army::getExp() { return EXP; }
 
 void Army::setLF(int lf) { LF = lf; }
 
 void Army::setExp(int exp) { EXP = exp; }
+
+UnitList *Army::getUnitList() const { return unitList; } 
 
 // LiberationArmy
 LiberationArmy::LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField)
@@ -474,11 +482,11 @@ void LiberationArmy::recalcIndices()
 
 void LiberationArmy::confiscateEnemyUnits(Army *enemy)
 {
-    for (Unit *unit : enemy->unitList->getAllUnits())
+    for (Unit *unit : enemy->getUnitList()->getAllUnits())
     {
         unitList->insert(unit);
     }
-    enemy->unitList->clear();
+    enemy->getUnitList()->clear();
     enemy->setLF(0);
     enemy->setExp(0);
 }
@@ -694,6 +702,7 @@ UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size
     }
     capacity = isSpecial ? 12 : 8;
 }
+
 void UnitList::clear()
 {
     Node *current = head;
@@ -842,6 +851,7 @@ string UnitList::str() const
     ss << "]";
     return ss.str();
 }
+
 vector<Unit *> UnitList::getAllUnits() const
 {
     vector<Unit *> result;
@@ -930,6 +940,7 @@ string UnitList::infantryTypeToString(InfantryType type) const
 
 // Position
 Position::Position(int r, int c) : r(r), c(c) {}
+
 Position::Position(const string &str_pos)
 {
     string cleaned = str_pos;
@@ -999,6 +1010,7 @@ ARVN::ARVN(Unit **unitArray, int size, string name, BattleField *battleField)
     : Army(unitArray, size, name, battleField)
 {
 }
+
 void ARVN::fight(Army *enemy, bool defense)
 {
     if (!enemy || !unitList)
@@ -1050,6 +1062,7 @@ ARVN::~ARVN() {}
 // TerrainElement
 TerrainElement::TerrainElement() {}
 TerrainElement::~TerrainElement() {}
+
 Road::Road() {}
 
 void Road::getEffect(Army *army)
@@ -1488,7 +1501,6 @@ Configuration::Configuration(const string &filepath)
                 }
             }
         }
-        // SỬA: Di chuyển EVENT_CODE ra ngoài UNIT_LIST
         else if (key == "EVENT_CODE")
         {
             try
@@ -1623,6 +1635,7 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
         "ARVN",
         battleField);
 }
+
 void HCMCampaign::run()
 {
     if (!battleField || !liberationArmy || !ARVN || !config)
