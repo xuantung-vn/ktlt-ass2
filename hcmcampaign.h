@@ -274,19 +274,31 @@ public:
     Configuration(const string& filepath);
     string str() const;
     ~Configuration();
+    // Added getters
+    int getNumRows() const { return num_rows; }
+    int getNumCols() const { return num_cols; }
+    const vector<Position*>& getArrayForest() const { return arrayForest; }
+    const vector<Position*>& getArrayRiver() const { return arrayRiver; }
+    const vector<Position*>& getArrayFortification() const { return arrayFortification; }
+    const vector<Position*>& getArrayUrban() const { return arrayUrban; }
+    const vector<Position*>& getArraySpecialZone() const { return arraySpecialZone; }
+    Unit** getLiberationUnits() const { return liberationUnits; }
+    int getLiberationUnitsSize() const { return liberationUnitsSize; }
+    Unit** getARVNUnits() const { return ARVNUnits; }
+    int getARVNUnitsSize() const { return ARVNUnitsSize; }
+    int getEventCode() const { return eventCode; }
 };
-class HCMCampaign
-{
+class HCMCampaign {
 private:
-    Configuration *config;
-    BattleField *battleField;
-    LiberationArmy *liberationArmy;
-    ARVN *ARVN;
-
+    Configuration* config;
+    BattleField* battleField;
+    LiberationArmy* liberationArmy;
+    ARVN* ARVN;
 public:
-    HCMCampaign(const string &config_file_path);
+    HCMCampaign(const string& config_file_path);
     void run();
     string printResult();
+    ~HCMCampaign();
 };
 
 #endif

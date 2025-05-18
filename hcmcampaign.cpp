@@ -1576,6 +1576,122 @@ Configuration::~Configuration()
     }
     delete[] ARVNUnits;
 }
+HCMCampaign::HCMCampaign(const string &config_file_path)
+{
+    config = new Configuration(config_file_path);
+
+    battleField = new BattleField(
+        config->getNumRows(),
+        config->getNumCols(),
+        config->getArrayForest(),
+        config->getArrayRiver(),
+        config->getArrayFortification(),
+        config->getArrayUrban(),
+        config->getArraySpecialZone());
+
+    // Initialize armies
+    liberationArmy = new LiberationArmy(
+        config->getLiberationUnits(),
+        config->getLiberationUnitsSize(),
+        "Liberation",
+        battleField);
+
+    ARVN = new ARVN(
+        config->getARVNUnits(),
+        config->getARVNUnitsSize(),
+        "ARVN",
+        battleField);
+}
+// HCMCampaign
+void HCMCampaign::run()
+{
+    if (!battleField || !liberationArmy || !ARVN || !config)
+        return;
+
+    TerrainElement **terrain = battleField->getTerrain();
+    int n_rows = battleField->getRows();
+    int n_cols = battleField->getCols();
+    for (int i = 0; i < n_rows; i++)
+    {
+        for (int j = 0; j < n_cols; j++)
+        {
+            if (terrain[i][j])
+            {
+                terrain[i][j]->getEffect(liberationArmy);
+                terrain[i][j]->getEffect(ARVN);
+            }
+        }
+    }
+
+    int eventCode = config->getEventCode();
+    if (eventCode < 75)
+    {
+        liberationArmy->fight(ARVN, false);
+    }
+    else
+    {
+        ARVN->fight(liberationArmy, false);
+        liberationArmy->fight(ARVN, false);
+    }
+
+    auto removeLowScoreUnits = [](Army *army)
+    {
+        if (!army || !army->getUnitList())
+            return;
+        vector<Unit *> toRemove;
+        for (Unit *unit : army->getUnitList()->getAllUnits())
+        {
+            if (unit->getAttackScore() <= 5)
+            {
+                toRemove.push_back(unit);
+            }
+        }
+        for (Unit *unit : toRemove)
+        {
+            army->getUnitList()->removeUnit(unit);
+        }
+    };
+    removeLowScoreUnits(liberationArmy);
+    removeLowScoreUnits(ARVN);
+
+    auto updateIndices = [](Army *army)
+    {
+        int LF = 0, EXP = 0;
+        for (Unit *unit : army->getUnitList()->getAllUnits())
+        {
+            if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+            {
+                LF += vehicle->getAttackScore();
+            }
+            else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+            {
+                EXP += infantry->getAttackScore();
+            }
+        }
+        army->setLF(LF > 1000 ? 1000 : (LF < 0 ? 0 : LF));
+        army->setEXP(EXP > 500 ? 500 : (EXP < 0 ? 0 : EXP));
+    };
+    updateIndices(liberationArmy);
+    updateIndices(ARVN);
+}
+
+string HCMCampaign::printResult()
+{
+    stringstream ss;
+    ss << "LIBERATIONARMY[LF=" << liberationArmy->getLF()
+       << ",EXP=" << liberationArmy->getEXP() << "]-";
+    ss << "ARVN[LF=" << ARVN->getLF()
+       << ",EXP=" << ARVN->getEXP() << "]";
+    return ss.str();
+}
+
+HCMCampaign::~HCMCampaign()
+{
+    delete liberationArmy;
+    delete ARVN;
+    delete battleField;
+    delete config;
+}
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER
 ////////////////////////////////////////////////
