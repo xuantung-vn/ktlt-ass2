@@ -1056,7 +1056,7 @@ string ARVN::str() const
 ARVN::~ARVN() {}
 
 // TerrainElement
-TerrainElement::TerrainElement() {}
+// TerrainElement::TerrainElement() {}
 TerrainElement::~TerrainElement() {}
 
 Road::Road() {}
@@ -1312,16 +1312,24 @@ void SpecialZone::getEffect(Army *army)
 }
 
 // BattleField
-BattleField::BattleField(int n_rows, int n_cols, vector<Position *> arrayForest,
-                         vector<Position *> arrayRiver, vector<Position *> arrayFortification,
-                         vector<Position *> arrayUrban, vector<Position *> arraySpecialZone)
-    : n_rows(n_rows >= 0 ? n_rows : 0), n_cols(n_cols >= 0 ? n_cols : 0)
+BattleField::BattleField(int n_rows, int n_cols,
+                         vector<Position *> arrayForest,
+                         vector<Position *> arrayRiver,
+                         vector<Position *> arrayFortification,
+                         vector<Position *> arrayUrban,
+                         vector<Position *> arraySpecialZone)
+    : n_rows(n_rows), n_cols(n_cols)
 {
-    terrain = new TerrainElement *[n_rows];
-    for (int i = 0; i < n_rows; i++)
+    if (n_rows <= 0 || n_cols <= 0)
     {
-        terrain[i] = new TerrainElement *[n_cols];
-        for (int j = 0; j < n_cols; j++)
+        throw invalid_argument("Invalid battlefield dimensions");
+    }
+
+    terrain = vector<vector<TerrainElement *>>(
+        n_rows, vector<TerrainElement *>(n_cols, nullptr));
+    for (int i = 0; i < n_rows; ++i)
+    {
+        for (int j = 0; j < n_cols; ++j)
         {
             terrain[i][j] = new Road();
         }
@@ -1362,6 +1370,7 @@ BattleField::BattleField(int n_rows, int n_cols, vector<Position *> arrayForest,
         assignTerrain(pos, new SpecialZone(*pos));
     }
 }
+
 string BattleField::str() const
 {
     stringstream ss;
@@ -1371,15 +1380,18 @@ string BattleField::str() const
 
 BattleField::~BattleField()
 {
-    for (int i = 0; i < n_rows; i++)
+    for (int i = 0; i < n_rows; ++i)
     {
-        for (int j = 0; j < n_cols; j++)
+        for (int j = 0; j < n_cols; ++j)
         {
             delete terrain[i][j];
         }
-        delete[] terrain[i];
     }
-    delete[] terrain;
+}
+
+const vector<vector<TerrainElement *>> &BattleField::getTerrain() const
+{
+    return terrain;
 }
 
 // Configuration
@@ -1636,7 +1648,7 @@ void HCMCampaign::run()
     if (!battleField || !liberationArmy || !arvnArmy || !config)
         return;
 
-    TerrainElement **terrain = battleField->getTerrain();
+    const vector<vector<TerrainElement *>> &terrain = battleField->getTerrain();
     int n_rows = battleField->getRows();
     int n_cols = battleField->getCols();
     for (int i = 0; i < n_rows; i++)

@@ -207,7 +207,6 @@ public:
 class TerrainElement
 {
 public:
-    TerrainElement();
     virtual ~TerrainElement();
     virtual void getEffect(Army *army) = 0;
 };
@@ -273,7 +272,7 @@ class BattleField
 {
 private:
     int n_rows, n_cols;
-    TerrainElement **terrain;
+    vector<vector<TerrainElement *>> terrain;
 
 public:
     BattleField(int n_rows, int n_cols, vector<Position *> arrayForest,
@@ -281,7 +280,8 @@ public:
                 vector<Position *> arrayUrban, vector<Position *> arraySpecialZone);
     string str() const;
     ~BattleField();
-    TerrainElement **getTerrain() const { return terrain; }
+    const vector<vector<TerrainElement *>> &getTerrain() const;
+
     int getRows() const { return n_rows; }
     int getCols() const { return n_cols; }
 };

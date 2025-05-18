@@ -59,6 +59,7 @@ void g_satc_02() {
 }
 
 int main(int argc, const char * argv[]) {
+    cout << "* After the fight" << endl;
     g_satc_01();
     g_satc_02();
     return 0;
