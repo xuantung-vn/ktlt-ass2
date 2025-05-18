@@ -77,6 +77,7 @@ public:
     virtual void fight(Army *enemy, bool defense = false) = 0;
     virtual string str() const = 0;
     virtual ~Army();
+    UnitList* getUnitList() const { return unitList; }
     int getLF();
     void setLF(int lf);
     int getExp();
@@ -140,6 +141,8 @@ public:
     void setQuantity(int quan);
     void setWeight(int w);
     void setPos(Position pos);
+    int getQuantity() const;
+    int getWeight() const;
 };
 class Vehicle : public Unit
 {
@@ -152,6 +155,7 @@ public:
     int getAttackScore() override;
     string str() const override;
     string getStringType() const;
+    VehicleType getVehicleType() const;
 };
 class Infantry : public Unit
 {
@@ -164,7 +168,7 @@ private:
 public:
     Infantry(int quantity, int weight, const Position pos, InfantryType infantryType);
     ~Infantry();
-    int getAttackScore() override;
+    int getAttackScore()const override;
     string str() const override;
     string getStringType() const;
 

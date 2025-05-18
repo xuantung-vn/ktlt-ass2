@@ -30,6 +30,8 @@ Unit::setWeight(int w)
 {
     weight = w;
 }
+int Unit::getWeight() const { return weight; }
+int Unit::getQuantity() const { return quantity; }
 Unit::setPos(Position p)
 {
     pos = p;
@@ -80,6 +82,7 @@ string Vehicle::str() const
        << "]";
     return ss.str();
 }
+VehicleType Vehicle::getVehicleType() const { return vehicleType; }
 
 // Infantry
 Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType infantryType)
@@ -113,7 +116,7 @@ int Infantry::personalNumber(int num, int year) const
     }
     return total;
 }
-int Infantry::getAttackScore()
+int Infantry::getAttackScore() const
 {
     int typeValue = static_cast<int>(infantryType);
     int initialScore = typeValue * 56 + quantity * weight;
@@ -124,16 +127,16 @@ int Infantry::getAttackScore()
         initialScore += extraScore;
     }
     int pNumber = personalNumber(initialScore, 1975);
+    int adjustedQuantity = quantity;
     if (pNumber > 7)
     {
-        quantity = static_cast<int>(quantity * 1.2);
+        adjustedQuantity = static_cast<int>(quantity * 1.2);
     }
     else if (pNumber < 3)
     {
-        quantity = static_cast<int>(quantity * 0.9);
+        adjustedQuantity = static_cast<int>(quantity * 0.9);
     }
-    int finalScore = typeValue * 56 + quantity * weight + extraScore;
-    return finalScore;
+    return typeValue * 56 + adjustedQuantity * weight + extraScore;
 }
 
 string Infantry::getStringType() const
@@ -175,7 +178,7 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
     for (int i = 0; i < size; i++)
     {
         const Unit *unit = unitArray[i];
-        unitList->addUnit(unit);
+        unitList->insert(unit);
 
         const Vehicle *vehicle = dynamic_cast<const Vehicle *>(unit);
         if (vehicle)
@@ -198,12 +201,11 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
         }
     }
 }
-Army::~Army() {}
+Army::~Army() { delete unitList; }
 int Army::getLF() { return LF; }
 int Army::getExp() { return EXP; }
 void Army::setLF(int lf) { LF = lf; }
 void Army::setExp(int exp) { EXP = exp; }
-Army::~Army() {}
 
 // LiberationArmy
 LiberationArmy::LiberationArmy(const Unit **unitArray, int size, string name, BattleField *battleField) : Army(unitArray, size, name, battleField) {}
@@ -291,21 +293,21 @@ vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
     }
     return result;
 }
-vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
+vector<Unit *> LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
 {
-    vector<Unit *> infantry;
+    vector<Unit *> vehicles;
     vector<Unit *> result;
     int minScore = INT_MAX;
 
     for (Unit *unit : unitList->getAllUnits())
     {
-        if (dynamic_cast<Infantry *>(unit))
+        if (dynamic_cast<Vehicle *>(unit))
         {
-            infantry.push_back(unit);
+            vehicles.push_back(unit);
         }
     }
 
-    int n = infantry.size();
+    int n = vehicles.size();
     for (int mask = 1; mask < (1 << n); mask++)
     {
         int score = 0;
@@ -314,11 +316,11 @@ vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
         {
             if (mask & (1 << i))
             {
-                score += dynamic_cast<Infantry *>(infantry[i])->getAttackScore();
-                temp.push_back(infantry[i]);
+                score += dynamic_cast<Vehicle *>(vehicles[i])->getAttackScore();
+                temp.push_back(vehicles[i]);
             }
         }
-        if (score > enemyEXP && score < minScore)
+        if (score > enemyLF && score < minScore)
         {
             minScore = score;
             result = temp;
@@ -468,20 +470,13 @@ bool UnitList::isContain(VehicleType vehicleType)
     {
         if (Vehicle *vehicle = dynamic_cast<Vehicle *>(units[i]))
         {
-            if (vehicle->getStringType() == vehicleTypeToString(vehicleType))
+            if (vehicle->getVehicleType() == vehicleType)
             {
                 return true;
             }
         }
     }
     return false;
-}
-bool UnitList::insert(Unit *unit)
-{
-    if (size >= capacity)
-        return false;
-    units[size++] = unit;
-    return true;
 }
 bool UnitList::isContain(InfantryType infantryType)
 {
@@ -496,6 +491,13 @@ bool UnitList::isContain(InfantryType infantryType)
         }
     }
     return false;
+}
+bool UnitList::insert(Unit *unit)
+{
+    if (size >= capacity)
+        return false;
+    units[size++] = unit;
+    return true;
 }
 string UnitList::str() const
 {
