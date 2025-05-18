@@ -7,7 +7,16 @@
         "ratio": "cpp",
         "tuple": "cpp",
         "variant": "cpp",
-        "new": "cpp"
+        "new": "cpp",
+        "__node_handle": "cpp",
+        "__split_buffer": "cpp",
+        "deque": "cpp",
+        "queue": "cpp",
+        "stack": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

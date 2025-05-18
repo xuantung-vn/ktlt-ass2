@@ -77,8 +77,36 @@ public:
     virtual void fight(Army *enemy, bool defense = false) = 0;
     virtual string str() const = 0;
     virtual ~Army();
+    int getLF();
+    void setLF(int lf);
+    int getExp();
+    void setExp(int exp);
 };
-
+class LiberationArmy : public Army
+{
+public:
+    LiberationArmy(const Unit **unitArray, int size, string name,
+                   BattleField *battleField);
+    virtual void fight(Army *enemy, bool defence = false) override;
+    virtual string str() override;
+    // Xoá đơn vị
+    void removeUnits(Unit unit);
+    // Tìm tổ hợp bộ binh nhỏ nhất có sức mạnh lớn hơn
+    void findSmallestInfantryCombGreaterThan(int enemyExp);
+    // Tìm tổ hợp phương tiện nhỏ nhất có sức mạnh lớn hơn
+    void findSmallestVehicleCombGreaterThan(int enemyLF);
+    // Tịch thu chiến lợi phẩm
+    void confiscateEnemyUnits(Army *enemy);
+    // Loại bỏ toàn bộ bộ binh
+    void eliminateAllInfantry();
+    // Loại bỏ toàn bộ phương tiện chiến đấu
+    void eliminateAllVehicles();
+    // Tính toán lại sức mạnh quân đội
+    void recalcIndices();
+    // Giảm toàn bộ sức mạnh quân đội
+    void reduceAllUnitsWeight(int num);
+    reduceAllUnitsWeight virtual ~LiberationArmy();
+};
 class Position
 {
 private:
@@ -119,7 +147,6 @@ public:
     string str() const override;
     string getStringType() const;
 };
-
 class Infantry : public Unit
 {
 private:
@@ -127,6 +154,7 @@ private:
     bool isPerfectSquare(int n) const {};
     int personalNumber(int num, int year = 1975) const {};
     int digitSum(int n) const {};
+
 public:
     Infantry(int quantity, int weight, const Position pos, InfantryType infantryType);
     ~Infantry();
@@ -134,7 +162,7 @@ public:
     string str() const override;
     string getStringType() const;
 
-} 
+}
 
 class UnitList
 {

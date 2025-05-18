@@ -14,7 +14,7 @@ Position Unit::getCurrentPosition() const
     return pos;
 }
 
-// Vehicel
+// Vehicle
 Vehicle::Vehicle(VehicleType vehicleType, int quantity, int weight, const Position pos)
     : Unit(quantity, weight, pos), vehicleType(vehicleType) {}
 
@@ -174,6 +174,109 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
     }
 }
 Army::~Army() {}
+int Army::getLF() { return LF; }
+int Army::getExp() { return EXP; }
+void Army::setLF(int lf) { LF = lf; }
+void Army::setExp(int exp) { EXP = exp; }
+Army::~Army() {}
+
+// LiberationArmy
+LiberationArmy::LiberationArmy(const Unit **unitArray, int size, string name, BattleField *battleField) : Army(unitArray, size, name, battleField) {}
+string LiberationArmy::str() const
+{
+    return "LiberationArmy: " + name + " (LF=" + to_string(LF) + ", EXP=" + to_string(EXP) + ")";
+}
+LiberationArmy::~LiberationArmy() {}
+
+void LiberationArmy::removeUnits(Unit unit)
+{
+}
+void LiberationArmy::recalcIndices()
+{
+}
+void LiberationArmy::confiscateEnemyUnits(Army *enemy)
+{
+}
+void LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
+{
+}
+void LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
+{
+}
+void LiberationArmy::eliminateAllInfantry()
+{
+}
+void LiberationArmy::eliminateAllVehicles()
+{
+}
+
+LiberationArmy::fight(Army *enemy, bool defense = false)
+{
+    if (defense)
+    {
+        return;
+    }
+    else
+    {
+        float effectiveLF = LF * 1.5;
+        float effectiveEXP = EXP * 1.5;
+
+        auto combInfantry = findSmallestInfantryCombGreaterThan(enemy->getEXP());
+        auto combVehicle = findSmallestVehicleCombGreaterThan(enemy->getLF());
+
+        bool hasCombInfantry = !combInfantry.empty();
+        bool hasCombVehicle = !combVehicle.empty();
+
+        // Case1:  Tìm ra tổ hợp thoả mãn
+        if (hasCombInfantry && hasCombVehicle)
+        {
+            // Xoá danh sách tổ hợp thoả mãn
+            removeUnits(combInfantry);
+            removeUnits(combVehicle);
+
+            confiscateEnemyUnits(enemy);
+            recalcIndices();
+        }
+        else if (hasCombInfantry || hasCombVehicle)
+        {
+            if (hasCombInfantry)
+            {
+                if (LF > enemy->getLF())
+                {
+                    removeUnits(combInfantry);
+                    eliminateAllVehicles();
+                    confiscateEnemyUnits(enemy);
+                    recalcIndices();
+                }
+                else
+                {
+                    // No battle
+                    reduceAllUnitsWeight(10);
+                    recalcIndices();
+                }
+            }
+            else
+            {
+                if (EXP > enemy->getExp())
+                {
+                    removeUnits(combVehicle);
+                    eliminateAllInfantry();
+                    confiscateEnemyUnits(enemy);
+                    recalcIndices();
+                }
+                else
+                {
+                    // No battle
+                    reduceAllUnitsWeight(10);
+                    recalcIndices();
+                }
+            }
+        }else{
+            reduceAllUnitsWeight(10);
+            recalcIndices();
+        }
+    }
+}
 
 ////////////////////////////////////////////////
 /// END OF STUDENT'S ANSWER
