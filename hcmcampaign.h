@@ -114,12 +114,26 @@ private:
 public:
     Vehicle(VehicleType vehicleType, int quantity, int weight, const Position pos);
     ~Vehicle();
-
     int getAttackScore() override;
     string str() const override;
     string getStringType() const;
 };
-class UnitList
+
+class Infantry : public Unit
+{
+private:
+    InfantryType infantryType;
+    bool isPerfectSquare(int n) const {};
+    int personalNumber(int num, int year = 1975) const {};
+    int digitSum(int n) const {};
+public:
+    Infantry(int quantity, int weight, const Position pos, InfantryType infantryType);
+    ~Infantry();
+    int getAttackScore() override;
+    string str() const override;
+    string getStringType() const;
+
+} class UnitList
 {
 private:
     int capacity;
