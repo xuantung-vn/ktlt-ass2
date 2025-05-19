@@ -4,6 +4,19 @@
 /// STUDENT'S ANSWER BEGINS HERE
 ////////////////////////////////////////////////////////////////////////
 
+// Helper function to convert string to uppercase
+string toUpper(const string &s)
+{
+    string result = s;
+    for (char &c : result)
+    {
+        if (c >= 'a' && c <= 'z')
+        {
+            c = c - 'a' + 'A';
+        }
+    }
+    return result;
+}
 // Helper
 int nextFibonacci(int n)
 {
@@ -73,9 +86,7 @@ double euclideanDistance(const Position &p1, const Position &p2)
 
 bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bool &isVehicle)
 {
-    string upperName = name;
-    for (char &c : upperName)
-        c = toupper(c);
+    string upperName = toUpper(name);
     const pair<string, VehicleType> vehiclePairs[] = {
         {"TRUCK", TRUCK}, {"MORTAR", MORTAR}, {"ANTIAIRCRAFT", ANTIAIRCRAFT}, {"ARMOREDCAR", ARMOREDCAR}, {"APC", APC}, {"ARTILLERY", ARTILLERY}, {"TANK", TANK}};
     const pair<string, InfantryType> infantryPairs[] = {
@@ -101,54 +112,91 @@ bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bo
     return false;
 }
 
-// Parse a single unit string and return a Unit
 Unit *parseUnit(const string &unitStr, bool &isLebsArmy)
 {
-    int quantity, armyBelong;
-    float weight;
+    int quantity = 0;
+    float weight = 0.0f;
     string unitName;
-    float posX, posY;
+    float posX = 0.0f, posY = 0.0f;
+    int armyBelong = -1;
 
     size_t nameEnd = unitStr.find('(');
+    if (nameEnd == string::npos)
+        return nullptr;
     unitName = unitStr.substr(0, nameEnd);
 
     string content = unitStr.substr(nameEnd + 1, unitStr.length() - nameEnd - 2);
     stringstream ss(content);
     string token;
 
-    // Get quantity
-    getline(ss, token, ',');
-    quantity = stoi(token);
+    if (!getline(ss, token, ','))
+        return nullptr;
+    try
+    {
+        quantity = stoi(token);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
 
-    // Get weight
-    getline(ss, token, ',');
-    weight = stof(token);
+    if (!getline(ss, token, ','))
+        return nullptr;
+    try
+    {
+        weight = stof(token);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
 
-    // Get (posX, posY)
-    getline(ss, token, ',');
+    if (!getline(ss, token, ','))
+        return nullptr;
     if (token.front() == ' ')
         token = token.substr(1);
-    token = token.substr(1); // remove '('
-    posX = stof(token);
+    if (token.front() != '(')
+        return nullptr;
+    token = token.substr(1);
+    try
+    {
+        posX = stof(token);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
 
-    getline(ss, token, ')');
+    if (!getline(ss, token, ')'))
+        return nullptr;
     if (token.front() == ' ')
         token = token.substr(1);
-    posY = stof(token);
+    try
+    {
+        posY = stof(token);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
 
-    // Get armyBelong
-    getline(ss, token, ',');
-    getline(ss, token); // Final value
+    if (!getline(ss, token, ',') || !getline(ss, token))
+        return nullptr;
     if (token.front() == ' ')
         token = token.substr(1);
-    armyBelong = stoi(token);
+    try
+    {
+        armyBelong = stoi(token);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
 
-    // Create Position
     Position *pos = new Position(posX, posY);
 
-    // Determine unit type
     VehicleType vType;
-    InfantryType iType;
+    InfantryType iType = REGULARINFANTRY;
     bool isVehicle;
     if (!getUnitType(unitName, vType, iType, isVehicle))
     {
@@ -188,7 +236,6 @@ Unit *parseUnit(const string &unitStr, bool &isLebsArmy)
 
 void parseStringToPosition(const string &key, string val, vector<Position *> &target)
 {
-    // Validate key using string comparison
     if (key != "ARRAY_FOREST" && key != "ARRAY_RIVER" &&
             key != "ARRAY_FORTIFICATION" && key != "ARRAY_URBAN" &&
             key != "ARRAY_SPECIAL_ZONE" ||
@@ -197,7 +244,6 @@ void parseStringToPosition(const string &key, string val, vector<Position *> &ta
         return;
     }
 
-    // Remove square brackets if present
     if (val.front() == '[')
         val.erase(0, 1);
     if (val.back() == ']')
@@ -215,9 +261,15 @@ void parseStringToPosition(const string &key, string val, vector<Position *> &ta
         size_t comma = pair.find(',');
         if (comma != string::npos)
         {
-            int row = stoi(pair.substr(0, comma));
-            int col = stoi(pair.substr(comma + 1));
-            target.push_back(new Position(row, col));
+            try
+            {
+                int row = stoi(pair.substr(0, comma));
+                int col = stoi(pair.substr(comma + 1));
+                target.push_back(new Position(row, col));
+            }
+            catch (...)
+            {
+            }
         }
         start = right + 1;
         while (start < val.size() && (val[start] == ',' || isspace(val[start])))
@@ -226,6 +278,7 @@ void parseStringToPosition(const string &key, string val, vector<Position *> &ta
         }
     }
 }
+
 vector<Position *> parseTerrainArray(const string &value)
 {
     vector<Position *> positions;
@@ -266,7 +319,6 @@ vector<Position *> parseTerrainArray(const string &value)
     return positions;
 }
 
-// Unit
 Unit::Unit(int quantity, int weight, const Position pos)
     : quantity(quantity), weight(weight), pos(pos) {}
 
@@ -298,7 +350,6 @@ Position Unit::getCurrentPosition() const
     return pos;
 }
 
-// Vehicle
 Vehicle::Vehicle(int quantity, int weight, const Position pos, VehicleType vehicleType)
     : Unit(quantity, weight, pos), vehicleType(vehicleType) {}
 
@@ -342,7 +393,6 @@ string Vehicle::str() const
 
 VehicleType Vehicle::getVehicleType() const { return vehicleType; }
 
-// Infantry
 Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType infantryType)
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
 
@@ -429,27 +479,33 @@ string Infantry::str() const
     return ss.str();
 }
 
-// Army
 Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
     : name(name), battleField(battleField), LF(0), EXP(0)
 {
+    if (size < 0)
+        size = 0;
     unitList = new UnitList(LF, EXP);
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < size && unitArray; i++)
     {
-        unitList->insert(unitArray[i]); // Units not owned by UnitList
-        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unitArray[i]))
+        if (unitArray[i])
         {
-            LF += vehicle->getAttackScore();
-        }
-        else if (Infantry *infantry = dynamic_cast<Infantry *>(unitArray[i]))
-        {
-            EXP += infantry->getAttackScore();
+            Unit *unitCopy = nullptr;
+            if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unitArray[i]))
+            {
+                unitCopy = new Vehicle(*vehicle);
+                LF += unitCopy->getAttackScore();
+            }
+            else if (Infantry *infantry = dynamic_cast<Infantry *>(unitArray[i]))
+            {
+                unitCopy = new Infantry(*infantry);
+                EXP += unitCopy->getAttackScore();
+            }
+            if (unitCopy)
+                unitList->insert(unitCopy);
         }
     }
-    if (LF > 1000)
-        LF = 1000;
-    if (EXP > 500)
-        EXP = 500;
+    LF = std::min(LF, 1000);
+    EXP = std::min(EXP, 500);
 }
 
 Army::~Army() { delete unitList; }
@@ -464,7 +520,6 @@ void Army::setExp(int exp) { EXP = exp; }
 
 UnitList *Army::getUnitList() const { return unitList; }
 
-// LiberationArmy
 LiberationArmy::LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField)
     : Army(unitArray, size, name, battleField) {}
 
@@ -722,8 +777,6 @@ void LiberationArmy::fight(Army *enemy, bool defense)
         recalcIndices();
     }
 }
-
-// UnitList
 UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size(0)
 {
     int S = armyLF + armyEXP;
@@ -745,9 +798,8 @@ void UnitList::clear()
     while (current)
     {
         Node *next = current->next;
-        if (current->unit != nullptr)
-            delete current->unit;
-        delete current;
+        delete current->unit; // Delete the Unit object
+        delete current;       // Delete the Node
         current = next;
     }
     head = tail = nullptr;
@@ -819,7 +871,7 @@ bool UnitList::insert(Unit *unit)
         if (sameType && samePos)
         {
             current->unit->setQuantity(current->unit->getQuantity() + unit->getQuantity());
-            delete unit;
+            delete unit; // Prevent double-free
             return true;
         }
         current = current->next;
@@ -853,6 +905,7 @@ bool UnitList::insert(Unit *unit)
     size++;
     return true;
 }
+
 string UnitList::str() const
 {
     stringstream ss;
@@ -918,10 +971,8 @@ void UnitList::removeUnit(Unit *unit)
             }
             if (current == tail)
             {
-                tail = prev;
+                tail = prev ? prev : head;
             }
-            if (current->unit != nullptr)
-                delete current->unit; // Delete only if owned
             delete current;
             size--;
             return;
@@ -930,6 +981,7 @@ void UnitList::removeUnit(Unit *unit)
         current = current->next;
     }
 }
+
 string UnitList::vehicleTypeToString(VehicleType type) const
 {
     switch (type)
@@ -974,7 +1026,6 @@ string UnitList::infantryTypeToString(InfantryType type) const
     }
 }
 
-// Position
 Position::Position(int r, int c) : r(r), c(c) {}
 
 Position::Position(const string &str_pos)
@@ -1031,7 +1082,6 @@ string Position::str() const
     return ss.str();
 }
 
-// ARVN
 ARVN::ARVN(Unit **unitArray, int size, string name, BattleField *battleField)
     : Army(unitArray, size, name, battleField)
 {
@@ -1085,14 +1135,12 @@ string ARVN::str() const
 
 ARVN::~ARVN() {}
 
-// TerrainElement
 TerrainElement::~TerrainElement() {}
 
 Road::Road() {}
 
 void Road::getEffect(Army *army)
 {
-    // No effect on LiberationArmy or ARVN
 }
 
 Mountain::Mountain(const Position &pos) : pos(pos) {}
@@ -1340,7 +1388,6 @@ void SpecialZone::getEffect(Army *army)
     army->setExp(newEXP);
 }
 
-// BattleField
 BattleField::BattleField(int n_rows, int n_cols,
                          vector<Position *> arrayForest,
                          vector<Position *> arrayRiver,
@@ -1423,7 +1470,6 @@ const vector<vector<TerrainElement *>> &BattleField::getTerrain() const
     return terrain;
 }
 
-// Configuration
 Configuration::Configuration(const string &filepath)
 {
     num_rows = 0;
@@ -1451,19 +1497,40 @@ Configuration::Configuration(const string &filepath)
 
         if (key == "NUM_ROWS")
         {
-            num_rows = stoi(value);
+            try
+            {
+                num_rows = stoi(value);
+            }
+            catch (...)
+            {
+                num_rows = 0;
+            }
         }
         else if (key == "NUM_COLS")
         {
-            num_cols = stoi(value);
+            try
+            {
+                num_cols = stoi(value);
+            }
+            catch (...)
+            {
+                num_cols = 0;
+            }
         }
         else if (key == "EVENT_CODE")
         {
-            eventCode = stoi(value);
-            if (eventCode < 0)
+            try
+            {
+                eventCode = stoi(value);
+                if (eventCode < 0)
+                    eventCode = 0;
+                if (eventCode > 99)
+                    eventCode = eventCode % 100;
+            }
+            catch (...)
+            {
                 eventCode = 0;
-            if (eventCode > 99)
-                eventCode = eventCode % 100;
+            }
         }
         else if (key == "ARRAY_FOREST")
         {
@@ -1530,22 +1597,25 @@ Configuration::Configuration(const string &filepath)
                 {
                     continue;
                 }
-                // Parse unit
                 bool isLebsArmy = false;
                 Unit *unit = parseUnit(unitStr, isLebsArmy);
-                if (isLebsArmy)
+                if (unit)
                 {
-                    liberationUnits.push_back(unit);
-                }
-                else
-                {
-                    ARVNUnits.push_back(unit);
+                    if (isLebsArmy)
+                    {
+                        liberationUnits.push_back(unit);
+                    }
+                    else
+                    {
+                        ARVNUnits.push_back(unit);
+                    }
                 }
             }
         }
     }
     file.close();
 }
+
 string Configuration::str() const
 {
     stringstream ss;
@@ -1642,13 +1712,10 @@ Configuration::~Configuration()
     for (Position *pos : arraySpecialZone)
         delete pos;
 
-    for (Unit *u : liberationUnits)
-        delete u;
-    for (Unit *u : ARVNUnits)
-        delete u;
     liberationUnits.clear();
     ARVNUnits.clear();
 }
+
 vector<Position *> Configuration::getArrayForest() const
 {
     return arrayForest;
@@ -1684,7 +1751,6 @@ vector<Unit *> Configuration::getARVNUnits() const
     return ARVNUnits;
 }
 
-// HCMCampaign
 HCMCampaign::HCMCampaign(const string &config_file_path)
 {
     config = new Configuration(config_file_path);
@@ -1716,19 +1782,12 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
     Unit **ARVNArray = toPointerArray(ARVNUnits);
 
     this->liberationArmy = new LiberationArmy(liberationArray, liberationUnits.size(), "LiberationArmy", this->battleField);
-    for (Unit *unit : liberationUnits)
-    {
-        liberationArmy->getUnitList()->insert(unit); // Own these units
-    }
     this->arvnArmy = new ARVN(ARVNArray, ARVNUnits.size(), "ARVN", this->battleField);
-    for (Unit *unit : ARVNUnits)
-    {
-        arvnArmy->getUnitList()->insert(unit); // Own these units
-    }
 
     delete[] liberationArray;
     delete[] ARVNArray;
 }
+
 void HCMCampaign::run()
 {
     if (!battleField || !liberationArmy || !arvnArmy || !config)
@@ -1818,7 +1877,3 @@ HCMCampaign::~HCMCampaign()
     delete battleField;
     delete config;
 }
-
-////////////////////////////////////////////////
-/// END OF STUDENT'S ANSWER
-////////////////////////////////////////////////
