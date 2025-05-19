@@ -191,21 +191,6 @@ Unit *parseUnit(const string &unitStr)
     return unit;
 }
 
-// Parse UNIT_LIST and assign units to armies
-void parseUnitList(const vector<string> &UNIT_LIST)
-{
-    for (size_t i = 0; i < UNIT_LIST.size(); ++i)
-    {
-        string unitStr = trim(UNIT_LIST[i]);
-        if (unitStr.empty())
-        {
-            continue;
-        }
-        // Parse unit
-        Unit *unit = parseUnit(unitStr);
-    }
-}
-
 vector<Position *> parseTerrainArray(const string &value)
 {
     vector<Position *> positions;
@@ -1509,8 +1494,16 @@ Configuration::Configuration(const string &filepath)
             {
                 unitStrings.push_back(trim(inner.substr(start)));
             }
-
-            parseUnitList(unitStrings);
+            for (size_t i = 0; i < unitStrings.size(); ++i)
+            {
+                string unitStr = trim(unitStrings[i]);
+                if (unitStr.empty())
+                {
+                    continue;
+                }
+                // Parse unit
+                Unit *unit = parseUnit(unitStr);
+            }
         }
         else if (key == "EVENT_CODE")
         {
