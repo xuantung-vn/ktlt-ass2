@@ -119,7 +119,6 @@ private:
 public:
     Position(int r = 0, int c = 0);
     Position(const string &str_pos);
-    Position *parsePosition(const string &posStr);
     int getRow() const;
     int getCol() const;
     void setRow(int r);
@@ -313,6 +312,31 @@ public:
     Unit **getARVNUnits() const { return ARVNUnits; }
     int getARVNUnitsSize() const { return ARVNUnitsSize; }
     int getEventCode() const { return eventCode; }
+    string splitUnits(const string &input)
+    {
+        string result;
+        int depth = 0;
+        size_t start = 0;
+
+        for (size_t i = 0; i < input.length(); ++i)
+        {
+            if (input[i] == '(')
+            {
+                depth++;
+            }
+            else if (input[i] == ')')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    result += input.substr(start, i - start + 1) + "\n";
+                    start = i + 2;
+                }
+            }
+        }
+
+        return result;
+    }
 };
 
 class HCMCampaign

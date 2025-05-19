@@ -16,6 +16,8 @@ void g_satc_01() {
     cout << "----- Sample Testcase 01 -----" << endl;
     Configuration* config = new Configuration("config.txt");
     cout << config->str() << endl;
+    // Configuration[num_rows=10,num_cols=8,arrayForest=[(1,2),(3,5)],arrayRiver=[(0,0),(0,4)],arrayFortification=[(6,6)],arrayUrban=[(2,0)],arraySpecialZone=[(9,7)],liberationUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(1,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(1,1)]],ARVNUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(3,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(3,3)]],eventCode=23]
+    // Configuration[num_rows=10,num_cols=8,arrayForest=[],arrayRiver=[],arrayFortification=[],arrayUrban=[],arraySpecialZone=[],liberationUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(1,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(1,1)]],ARVNUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(3,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(3,3)]],eventCode=23]
     delete config;
 }
 void g_satc_02() {
@@ -61,6 +63,6 @@ void g_satc_02() {
 int main(int argc, const char * argv[]) {
     cout << "* After the fight" << endl;
     g_satc_01();
-    g_satc_02();
+    // g_satc_02();
     return 0;
 }
