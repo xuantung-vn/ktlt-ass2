@@ -290,9 +290,9 @@ class Configuration
 private:
     int num_rows, num_cols;
     vector<Position *> arrayForest, arrayRiver, arrayFortification, arrayUrban, arraySpecialZone;
-    Unit **liberationUnits;
     int liberationUnitsSize;
-    Unit **ARVNUnits;
+    vector<Unit*> liberationUnits;
+    vector<Unit*> ARVNUnits;
     int ARVNUnitsSize;
     int eventCode;
 
@@ -302,41 +302,17 @@ public:
     ~Configuration();
     int getNumRows() const { return num_rows; }
     int getNumCols() const { return num_cols; }
-    const vector<Position *> &getArrayForest() const { return arrayForest; }
-    const vector<Position *> &getArrayRiver() const { return arrayRiver; }
-    const vector<Position *> &getArrayFortification() const { return arrayFortification; }
-    const vector<Position *> &getArrayUrban() const { return arrayUrban; }
-    const vector<Position *> &getArraySpecialZone() const { return arraySpecialZone; }
-    Unit **getLiberationUnits() const { return liberationUnits; }
     int getLiberationUnitsSize() const { return liberationUnitsSize; }
-    Unit **getARVNUnits() const { return ARVNUnits; }
     int getARVNUnitsSize() const { return ARVNUnitsSize; }
     int getEventCode() const { return eventCode; }
-    string splitUnits(const string &input)
-    {
-        string result;
-        int depth = 0;
-        size_t start = 0;
-
-        for (size_t i = 0; i < input.length(); ++i)
-        {
-            if (input[i] == '(')
-            {
-                depth++;
-            }
-            else if (input[i] == ')')
-            {
-                depth--;
-                if (depth == 0)
-                {
-                    result += input.substr(start, i - start + 1) + "\n";
-                    start = i + 2;
-                }
-            }
-        }
-
-        return result;
-    }
+    
+    vector<Position*> getArrayForest() const;
+    vector<Position*> getArrayRiver() const;
+    vector<Position*> getArrayFortification() const;
+    vector<Position*> getArrayUrban() const;
+    vector<Position*> getArraySpecialZone() const;
+    vector<Unit*> getLiberationUnits() const;
+    vector<Unit*> getARVNUnits() const;
 };
 
 class HCMCampaign

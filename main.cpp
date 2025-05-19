@@ -1,26 +1,28 @@
 /*
-* Ho Chi Minh City University of Technology
-* Faculty of Computer Science and Engineering
-* Initial code for Assignment 2
-* Programming Fundamentals Spring 2025
-* Date: 02.02.2025
-*/
+ * Ho Chi Minh City University of Technology
+ * Faculty of Computer Science and Engineering
+ * Initial code for Assignment 2
+ * Programming Fundamentals Spring 2025
+ * Date: 02.02.2025
+ */
 
-//The library here is concretely set, students are not allowed to include any other libraries.
+// The library here is concretely set, students are not allowed to include any other libraries.
 
 #include "hcmcampaign.h"
 
 using namespace std;
 
-void g_satc_01() {
+void g_satc_01()
+{
     cout << "----- Sample Testcase 01 -----" << endl;
-    Configuration* config = new Configuration("config.txt");
+    Configuration *config = new Configuration("config.txt");
     cout << config->str() << endl;
     // Configuration[num_rows=10,num_cols=8,arrayForest=[(1,2),(3,5)],arrayRiver=[(0,0),(0,4)],arrayFortification=[(6,6)],arrayUrban=[(2,0)],arraySpecialZone=[(9,7)],liberationUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(1,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(1,1)]],ARVNUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(3,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(3,3)]],eventCode=23]
     // Configuration[num_rows=10,num_cols=8,arrayForest=[],arrayRiver=[],arrayFortification=[],arrayUrban=[],arraySpecialZone=[],liberationUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(1,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(1,1)]],ARVNUnits=[Vehicle[vehicleType=TANK,quantity=5,weight=2,position=(3,2)],Infantry[infantryType=REGULARINFANTRY,quantity=5,weight=2,position=(3,3)]],eventCode=23]
     delete config;
 }
-void g_satc_02() {
+void g_satc_02()
+{
     cout << "----- Sample Testcase 02 -----" << endl;
     Vehicle tankOfLiber(5, 2, Position(1, 2), TANK);
     Vehicle truckOfLiber(3, 1, Position(2, 2), TRUCK);
@@ -30,24 +32,24 @@ void g_satc_02() {
     Vehicle truckOfAr(3, 1, Position(3, 1), TRUCK);
     Infantry sniperOfAr(5, 2, Position(3, 3), SNIPER);
 
-    Unit** unitArrayOfLiber = new Unit*[3];
+    Unit **unitArrayOfLiber = new Unit *[3];
     unitArrayOfLiber[0] = &tankOfLiber;
     unitArrayOfLiber[1] = &truckOfLiber;
     unitArrayOfLiber[2] = &sniperOfLiber;
 
-    Unit** unitArrayOfAr = new Unit*[3];
+    Unit **unitArrayOfAr = new Unit *[3];
     unitArrayOfAr[0] = &tankOfAr;
     unitArrayOfAr[1] = &truckOfAr;
     unitArrayOfAr[2] = &sniperOfAr;
 
-    LiberationArmy* liberationArmy = new LiberationArmy(unitArrayOfLiber, 3, "LiberationArmy", 0);
+    LiberationArmy *liberationArmy = new LiberationArmy(unitArrayOfLiber, 3, "LiberationArmy", 0);
     cout << liberationArmy->str() << endl;
-    ARVN* arvn = new ARVN(unitArrayOfAr, 3, "ARVN", 0);
+    ARVN *arvn = new ARVN(unitArrayOfAr, 3, "ARVN", 0);
     cout << arvn->str() << endl;
 
-    Army* enemyLiber = arvn;
+    Army *enemyLiber = arvn;
     liberationArmy->fight(enemyLiber, false);
-    Army* enemyAr = liberationArmy;
+    Army *enemyAr = liberationArmy;
     arvn->fight(enemyAr, false);
 
     cout << "* After the fight" << endl;
@@ -60,7 +62,8 @@ void g_satc_02() {
     delete[] unitArrayOfAr;
 }
 
-int main(int argc, const char * argv[]) {
+int main(int argc, const char *argv[])
+{
     cout << "* After the fight" << endl;
     g_satc_01();
     // g_satc_02();

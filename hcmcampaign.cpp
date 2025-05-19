@@ -19,10 +19,6 @@ int nextFibonacci(int n)
     return b;
 }
 
-// Containers for armies
-vector<Unit *> libUnits;
-vector<Unit *> arvnUnits;
-
 bool isSpecialNumber(int n, int k)
 {
     if (n < 0)
@@ -106,7 +102,7 @@ bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bo
 }
 
 // Parse a single unit string and return a Unit
-Unit *parseUnit(const string &unitStr)
+Unit *parseUnit(const string &unitStr, bool isLebsArmy)
 {
     int quantity, armyBelong;
     float weight;
@@ -170,14 +166,13 @@ Unit *parseUnit(const string &unitStr)
         unit = new Infantry(quantity, weight, *pos, iType);
     }
 
-    // Store unit in the appropriate army
     if (armyBelong == 0)
     {
-        libUnits.push_back(unit);
+        isLebsArmy = true;
     }
     else if (armyBelong == 1)
     {
-        arvnUnits.push_back(unit);
+        isLebsArmy = false;
     }
     else
     {
@@ -187,10 +182,50 @@ Unit *parseUnit(const string &unitStr)
         return nullptr;
     }
 
-    delete pos; // Position already copied into object
+    delete pos;
     return unit;
 }
 
+void parseStringToPosition(const string &key, string val, vector<Position *> &target)
+{
+    // Validate key using string comparison
+    if (key != "ARRAY_FOREST" && key != "ARRAY_RIVER" &&
+            key != "ARRAY_FORTIFICATION" && key != "ARRAY_URBAN" &&
+            key != "ARRAY_SPECIAL_ZONE" ||
+        val.empty())
+    {
+        return;
+    }
+
+    // Remove square brackets if present
+    if (val.front() == '[')
+        val.erase(0, 1);
+    if (val.back() == ']')
+        val.pop_back();
+
+    size_t start = 0;
+    while (start < val.size())
+    {
+        size_t left = val.find('(', start);
+        size_t right = val.find(')', left);
+        if (left == string::npos || right == string::npos)
+            break;
+
+        string pair = val.substr(left + 1, right - left - 1);
+        size_t comma = pair.find(',');
+        if (comma != string::npos)
+        {
+            int row = stoi(pair.substr(0, comma));
+            int col = stoi(pair.substr(comma + 1));
+            target.push_back(new Position(row, col));
+        }
+        start = right + 1;
+        while (start < val.size() && (val[start] == ',' || isspace(val[start])))
+        {
+            ++start;
+        }
+    }
+}
 vector<Position *> parseTerrainArray(const string &value)
 {
     vector<Position *> positions;
@@ -1389,11 +1424,11 @@ const vector<vector<TerrainElement *>> &BattleField::getTerrain() const
 
 // Configuration
 Configuration::Configuration(const string &filepath)
-    : num_rows(0), num_cols(0),
-      liberationUnits(nullptr), liberationUnitsSize(0),
-      ARVNUnits(nullptr), ARVNUnitsSize(0),
-      eventCode(0)
 {
+    num_rows = 0;
+    num_cols = 0;
+    eventCode = 0;
+
     ifstream file(filepath);
     if (!file.is_open())
     {
@@ -1415,53 +1450,47 @@ Configuration::Configuration(const string &filepath)
 
         if (key == "NUM_ROWS")
         {
-            try
-            {
-                num_rows = stoi(value);
-            }
-            catch (...)
-            {
-            }
+            num_rows = stoi(value);
         }
         else if (key == "NUM_COLS")
         {
-            try
-            {
-                num_cols = stoi(value);
-            }
-            catch (...)
-            {
-            }
+            num_cols = stoi(value);
+        }
+        else if (key == "EVENT_CODE")
+        {
+            eventCode = stoi(value);
+            if (eventCode < 0)
+                eventCode = 0;
+            if (eventCode > 99)
+                eventCode = eventCode % 100;
         }
         else if (key == "ARRAY_FOREST")
         {
-            arrayForest = parseTerrainArray(value);
+            arrayForest.clear();
+            parseStringToPosition(key, value, arrayForest);
         }
         else if (key == "ARRAY_RIVER")
         {
-            arrayRiver = parseTerrainArray(value);
+            arrayRiver.clear();
+            parseStringToPosition(key, value, arrayRiver);
         }
         else if (key == "ARRAY_FORTIFICATION")
         {
-            arrayFortification = parseTerrainArray(value);
+            arrayFortification.clear();
+            parseStringToPosition(key, value, arrayFortification);
         }
         else if (key == "ARRAY_URBAN")
         {
-            arrayUrban = parseTerrainArray(value);
+            arrayUrban.clear();
+            parseStringToPosition(key, value, arrayUrban);
         }
         else if (key == "ARRAY_SPECIAL_ZONE")
         {
-            arraySpecialZone = parseTerrainArray(value);
+            arraySpecialZone.clear();
+            parseStringToPosition(key, value, arraySpecialZone);
         }
         else if (key == "UNIT_LIST")
         {
-            for (Unit *unit : libUnits)
-                delete unit;
-            for (Unit *unit : arvnUnits)
-                delete unit;
-            libUnits.clear();
-            arvnUnits.clear();
-            // Parse UNIT_LIST array
             string cleaned = trim(value);
             if (cleaned.empty() || cleaned.size() < 2 || cleaned[0] != '[' || cleaned.back() != ']')
             {
@@ -1472,7 +1501,6 @@ Configuration::Configuration(const string &filepath)
             {
                 continue;
             }
-            // Split unit strings
             vector<string> unitStrings;
             stringstream ss(inner);
             string unitStr;
@@ -1502,49 +1530,23 @@ Configuration::Configuration(const string &filepath)
                     continue;
                 }
                 // Parse unit
-                Unit *unit = parseUnit(unitStr);
-            }
-        }
-        else if (key == "EVENT_CODE")
-        {
-            try
-            {
-                eventCode = stoi(value);
-                if (eventCode < 0)
-                    eventCode = 0;
-                if (eventCode > 99)
-                    eventCode = eventCode % 100;
-            }
-            catch (...)
-            {
+                bool isLebsArmy = false;
+                Unit *unit = parseUnit(unitStr, isLebsArmy);
+
+                if (isLebsArmy)
+                {
+                    liberationUnits.push_back(unit);
+                }
+                else
+                {
+                    ARVNUnits.push_back(unit);
+                }
+                delete unit;
             }
         }
     }
     file.close();
-
-    // Allocate and copy liberationUnits
-    liberationUnitsSize = libUnits.size();
-    if (liberationUnitsSize > 0)
-    {
-        liberationUnits = new Unit *[liberationUnitsSize];
-        for (int i = 0; i < liberationUnitsSize; i++)
-        {
-            liberationUnits[i] = libUnits[i];
-        }
-    }
-
-    // Allocate and copy ARVNUnits
-    ARVNUnitsSize = arvnUnits.size();
-    if (ARVNUnitsSize > 0)
-    {
-        ARVNUnits = new Unit *[ARVNUnitsSize];
-        for (int i = 0; i < ARVNUnitsSize; i++)
-        {
-            ARVNUnits[i] = arvnUnits[i];
-        }
-    }
 }
-
 string Configuration::str() const
 {
     stringstream ss;
@@ -1598,20 +1600,31 @@ string Configuration::str() const
     ss << "],";
 
     ss << "liberationUnits=[";
-    for (int i = 0; i < liberationUnitsSize; ++i)
+    bool first = true;
+    for (const Unit *unit : liberationUnits)
     {
-        ss << liberationUnits[i]->str();
-        if (i < liberationUnitsSize - 1)
-            ss << ",";
+        if (unit)
+        {
+            if (!first)
+                ss << ",";
+            ss << unit->str();
+            first = false;
+        }
     }
     ss << "],";
     ss << "ARVNUnits=[";
-    for (int i = 0; i < ARVNUnitsSize; ++i)
-    {
-        ss << ARVNUnits[i]->str();
-        if (i < ARVNUnitsSize - 1)
-            ss << ",";
-    }
+    bool firstARVN = true;
+
+    // for (const Unit *unit : ARVNUnits)
+    // {
+    //     if (unit)
+    //     {
+    //         if (!firstARVN)
+    //             ss << ",";
+    //         ss << unit->str();
+    //         first = false;
+    //     }
+    // }
     ss << "],";
 
     ss << "eventCode=" << eventCode << "]";
@@ -1631,17 +1644,46 @@ Configuration::~Configuration()
     for (Position *pos : arraySpecialZone)
         delete pos;
 
-    for (int i = 0; i < liberationUnitsSize; ++i)
-    {
-        delete liberationUnits[i];
-    }
-    delete[] liberationUnits;
+    for (Unit *u : liberationUnits)
+        delete u;
+    for (Unit *u : ARVNUnits)
+        delete u;
+    liberationUnits.clear();
+    ARVNUnits.clear();
+}
+vector<Position *> Configuration::getArrayForest() const
+{
+    return arrayForest;
+}
 
-    for (int i = 0; i < ARVNUnitsSize; ++i)
-    {
-        delete ARVNUnits[i];
-    }
-    delete[] ARVNUnits;
+vector<Position *> Configuration::getArrayRiver() const
+{
+    return arrayRiver;
+}
+
+vector<Position *> Configuration::getArrayFortification() const
+{
+    return arrayFortification;
+}
+
+vector<Position *> Configuration::getArrayUrban() const
+{
+    return arrayUrban;
+}
+
+vector<Position *> Configuration::getArraySpecialZone() const
+{
+    return arraySpecialZone;
+}
+
+vector<Unit *> Configuration::getLiberationUnits() const
+{
+    return liberationUnits;
+}
+
+vector<Unit *> Configuration::getARVNUnits() const
+{
+    return ARVNUnits;
 }
 
 // HCMCampaign
@@ -1658,17 +1700,27 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
         config->getArrayUrban(),
         config->getArraySpecialZone());
 
-    liberationArmy = new LiberationArmy(
-        config->getLiberationUnits(),
-        config->getLiberationUnitsSize(),
-        "Liberation",
-        battleField);
+    vector<Unit *> liberationUnits = config->getLiberationUnits();
+    vector<Unit *> ARVNUnits = config->getARVNUnits();
+    auto toPointerArray = [](const vector<Unit *> &vect) -> Unit **
+    {
+        if (vect.empty())
+            return nullptr;
+        Unit **arr = new Unit *[vect.size()];
+        for (size_t i = 0; i < vect.size(); ++i)
+        {
+            arr[i] = vect[i];
+        }
+        return arr;
+    };
+    Unit **liberationArray = toPointerArray(liberationUnits);
+    Unit **ARVNArray = toPointerArray(ARVNUnits);
 
-    arvnArmy = new ARVN(
-        config->getARVNUnits(),
-        config->getARVNUnitsSize(),
-        "ARVN",
-        battleField);
+    this->liberationArmy = new LiberationArmy(liberationArray, liberationUnits.size(), "LiberationArmy", this->battleField);
+    this->arvnArmy = new ARVN(ARVNArray, ARVNUnits.size(), "ARVN", this->battleField);
+
+    delete[] liberationArray;
+    delete[] ARVNArray;
 }
 
 void HCMCampaign::run()
