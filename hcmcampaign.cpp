@@ -102,7 +102,7 @@ bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bo
 }
 
 // Parse a single unit string and return a Unit
-Unit *parseUnit(const string &unitStr, bool isLebsArmy)
+Unit *parseUnit(const string &unitStr, bool &isLebsArmy)
 {
     int quantity, armyBelong;
     float weight;
@@ -436,7 +436,7 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
     unitList = new UnitList(LF, EXP);
     for (int i = 0; i < size; i++)
     {
-        unitList->insert(unitArray[i]);
+        unitList->insert(unitArray[i]); // Units not owned by UnitList
         if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unitArray[i]))
         {
             LF += vehicle->getAttackScore();
@@ -745,7 +745,8 @@ void UnitList::clear()
     while (current)
     {
         Node *next = current->next;
-        delete current->unit;
+        if (current->unit != nullptr)
+            delete current->unit; 
         delete current;
         current = next;
     }
@@ -818,13 +819,13 @@ bool UnitList::insert(Unit *unit)
         if (sameType && samePos)
         {
             current->unit->setQuantity(current->unit->getQuantity() + unit->getQuantity());
-            delete unit;
+                delete unit; 
             return true;
         }
         current = current->next;
     }
 
-    Node *newNode = new Node(unit);
+    Node *newNode = new Node(unit); 
     if (dynamic_cast<Infantry *>(unit))
     {
         newNode->next = head;
@@ -852,7 +853,6 @@ bool UnitList::insert(Unit *unit)
     size++;
     return true;
 }
-
 string UnitList::str() const
 {
     stringstream ss;
@@ -920,6 +920,8 @@ void UnitList::removeUnit(Unit *unit)
             {
                 tail = prev;
             }
+            if (current->unit != nullptr)
+                delete current->unit; // Delete only if owned
             delete current;
             size--;
             return;
@@ -928,7 +930,6 @@ void UnitList::removeUnit(Unit *unit)
         current = current->next;
     }
 }
-
 string UnitList::vehicleTypeToString(VehicleType type) const
 {
     switch (type)
@@ -1532,7 +1533,6 @@ Configuration::Configuration(const string &filepath)
                 // Parse unit
                 bool isLebsArmy = false;
                 Unit *unit = parseUnit(unitStr, isLebsArmy);
-
                 if (isLebsArmy)
                 {
                     liberationUnits.push_back(unit);
@@ -1549,7 +1549,7 @@ Configuration::Configuration(const string &filepath)
 string Configuration::str() const
 {
     stringstream ss;
-    ss << "Configuration[";
+    ss << "[";
     ss << "num_rows=" << num_rows << ",";
     ss << "num_cols=" << num_cols << ",";
 
@@ -1623,7 +1623,6 @@ string Configuration::str() const
             firstARVN = false;
         }
     }
-    ss << "],";
     ss << "],";
 
     ss << "eventCode=" << eventCode << "]";
@@ -1717,12 +1716,19 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
     Unit **ARVNArray = toPointerArray(ARVNUnits);
 
     this->liberationArmy = new LiberationArmy(liberationArray, liberationUnits.size(), "LiberationArmy", this->battleField);
+    for (Unit *unit : liberationUnits)
+    {
+        liberationArmy->getUnitList()->insert(unit); // Own these units
+    }
     this->arvnArmy = new ARVN(ARVNArray, ARVNUnits.size(), "ARVN", this->battleField);
+    for (Unit *unit : ARVNUnits)
+    {
+        arvnArmy->getUnitList()->insert(unit); // Own these units
+    }
 
     delete[] liberationArray;
     delete[] ARVNArray;
 }
-
 void HCMCampaign::run()
 {
     if (!battleField || !liberationArmy || !arvnArmy || !config)
