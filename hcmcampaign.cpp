@@ -501,13 +501,17 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
                 EXP += unitCopy->getAttackScore();
             }
             if (unitCopy)
-                unitList->insert(unitCopy);
+            {
+                if (!unitList->insert(unitCopy))
+                {
+                    delete unitCopy;
+                }
+            }
         }
     }
     LF = std::min(LF, 1000);
     EXP = std::min(EXP, 500);
 }
-
 Army::~Army() { delete unitList; }
 
 int Army::getLF() { return LF; }
@@ -530,8 +534,7 @@ string LiberationArmy::str() const
        << "LF=" << LF
        << ",EXP=" << EXP
        << ",unitList=" << (unitList ? unitList->str() : "null")
-       << ",battleField=" << battleField
-       << "]";
+       << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
     return ss.str();
 }
 
@@ -569,15 +572,36 @@ void LiberationArmy::recalcIndices()
 
 void LiberationArmy::confiscateEnemyUnits(Army *enemy)
 {
-    for (Unit *unit : enemy->getUnitList()->getAllUnits())
+    if (!enemy || !enemy->getUnitList())
     {
-        unitList->insert(unit);
+        return;
+    }
+    auto enemyUnits = enemy->getUnitList()->getAllUnits();
+    for (Unit *unit : enemyUnits)
+    {
+        if (!unit)
+            continue;
+        Unit *unitCopy = nullptr;
+        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+        {
+            unitCopy = new Vehicle(*vehicle);
+        }
+        else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+        {
+            unitCopy = new Infantry(*infantry);
+        }
+        if (unitCopy)
+        {
+            if (!unitList->insert(unitCopy))
+            {
+                delete unitCopy;
+            }
+        }
     }
     enemy->getUnitList()->clear();
     enemy->setLF(0);
     enemy->setExp(0);
 }
-
 vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
 {
     vector<Unit *> infantry;
@@ -703,11 +727,12 @@ void LiberationArmy::reinforceUnitsWithFibonacci()
 
 void LiberationArmy::fight(Army *enemy, bool defense)
 {
-    if (!enemy || !unitList)
+    if (!enemy || !unitList || !enemy->getUnitList() || unitList->getAllUnits().empty())
+    {
         return;
-
-    float liberationLF = LF * (defense ? 1.3 : 1.5);
-    float liberationEXP = EXP * (defense ? 1.3 : 1.5);
+    }
+    float liberationLF = LF * (defense ? 1.3f : 1.5f);
+    float liberationEXP = EXP * (defense ? 1.3f : 1.5f);
     float enemyLF = enemy->getLF();
     float enemyEXP = enemy->getExp();
 
@@ -717,14 +742,13 @@ void LiberationArmy::fight(Army *enemy, bool defense)
         {
             confiscateEnemyUnits(enemy);
             recalcIndices();
-            return;
         }
-        if (liberationLF < enemyLF && liberationEXP < enemyEXP)
+        else if (liberationLF < enemyLF && liberationEXP < enemyEXP)
         {
             reinforceUnitsWithFibonacci();
             recalcIndices();
-            liberationLF = getLF() * 1.3;
-            liberationEXP = getExp() * 1.3;
+            liberationLF = getLF() * 1.3f;
+            liberationEXP = getExp() * 1.3f;
             if (liberationLF >= enemyLF && liberationEXP >= enemyEXP)
             {
                 confiscateEnemyUnits(enemy);
@@ -733,18 +757,18 @@ void LiberationArmy::fight(Army *enemy, bool defense)
             {
                 reduceAllUnitsWeight(10);
             }
+            recalcIndices();
         }
         else
         {
             reduceAllUnitsWeight(10);
+            recalcIndices();
         }
-        recalcIndices();
     }
     else
     {
         auto combInfantry = findSmallestInfantryCombGreaterThan(enemyEXP);
         auto combVehicle = findSmallestVehicleCombGreaterThan(enemyLF);
-
         bool hasCombInfantry = !combInfantry.empty();
         bool hasCombVehicle = !combVehicle.empty();
 
@@ -777,6 +801,7 @@ void LiberationArmy::fight(Army *enemy, bool defense)
         recalcIndices();
     }
 }
+
 UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size(0)
 {
     int S = armyLF + armyEXP;
@@ -947,12 +972,12 @@ vector<Unit *> UnitList::getAllUnits() const
     Node *current = head;
     while (current)
     {
-        result.push_back(current->unit);
+        if (current->unit)
+            result.push_back(current->unit);
         current = current->next;
     }
     return result;
 }
-
 void UnitList::removeUnit(Unit *unit)
 {
     Node *current = head;
@@ -1128,8 +1153,7 @@ string ARVN::str() const
        << "LF=" << LF
        << ",EXP=" << EXP
        << ",unitList=" << (unitList ? unitList->str() : "null")
-       << ",battleField=" << battleField
-       << "]";
+       << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
     return ss.str();
 }
 
