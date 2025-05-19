@@ -471,8 +471,8 @@ LiberationArmy::LiberationArmy(Unit **unitArray, int size, string name, BattleFi
 string LiberationArmy::str() const
 {
     stringstream ss;
-    ss << "LiberationArmy[name=" << name
-       << ",LF=" << LF
+    ss << "LiberationArmy["
+       << "LF=" << LF
        << ",EXP=" << EXP
        << ",unitList=" << (unitList ? unitList->str() : "null")
        << ",battleField=" << battleField
@@ -746,7 +746,7 @@ void UnitList::clear()
     {
         Node *next = current->next;
         if (current->unit != nullptr)
-            delete current->unit; 
+            delete current->unit;
         delete current;
         current = next;
     }
@@ -819,13 +819,13 @@ bool UnitList::insert(Unit *unit)
         if (sameType && samePos)
         {
             current->unit->setQuantity(current->unit->getQuantity() + unit->getQuantity());
-                delete unit; 
+            delete unit;
             return true;
         }
         current = current->next;
     }
 
-    Node *newNode = new Node(unit); 
+    Node *newNode = new Node(unit);
     if (dynamic_cast<Infantry *>(unit))
     {
         newNode->next = head;
@@ -1074,8 +1074,8 @@ void ARVN::fight(Army *enemy, bool defense)
 string ARVN::str() const
 {
     stringstream ss;
-    ss << "ARVN[name=" << name
-       << ",LF=" << LF
+    ss << "ARVN["
+       << "LF=" << LF
        << ",EXP=" << EXP
        << ",unitList=" << (unitList ? unitList->str() : "null")
        << ",battleField=" << battleField
