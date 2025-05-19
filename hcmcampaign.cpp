@@ -1541,7 +1541,6 @@ Configuration::Configuration(const string &filepath)
                 {
                     ARVNUnits.push_back(unit);
                 }
-                delete unit;
             }
         }
     }
@@ -1614,17 +1613,17 @@ string Configuration::str() const
     ss << "],";
     ss << "ARVNUnits=[";
     bool firstARVN = true;
-
-    // for (const Unit *unit : ARVNUnits)
-    // {
-    //     if (unit)
-    //     {
-    //         if (!firstARVN)
-    //             ss << ",";
-    //         ss << unit->str();
-    //         first = false;
-    //     }
-    // }
+    for (const Unit *unit : ARVNUnits)
+    {
+        if (unit)
+        {
+            if (!firstARVN)
+                ss << ",";
+            ss << unit->str();
+            firstARVN = false;
+        }
+    }
+    ss << "],";
     ss << "],";
 
     ss << "eventCode=" << eventCode << "]";
@@ -1700,8 +1699,6 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
         config->getArrayUrban(),
         config->getArraySpecialZone());
 
-    vector<Unit *> liberationUnits = config->getLiberationUnits();
-    vector<Unit *> ARVNUnits = config->getARVNUnits();
     auto toPointerArray = [](const vector<Unit *> &vect) -> Unit **
     {
         if (vect.empty())
@@ -1713,6 +1710,9 @@ HCMCampaign::HCMCampaign(const string &config_file_path)
         }
         return arr;
     };
+    vector<Unit *> liberationUnits = config->getLiberationUnits();
+    vector<Unit *> ARVNUnits = config->getARVNUnits();
+
     Unit **liberationArray = toPointerArray(liberationUnits);
     Unit **ARVNArray = toPointerArray(ARVNUnits);
 
