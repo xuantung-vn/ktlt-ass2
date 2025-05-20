@@ -435,13 +435,13 @@ int Infantry::getAttackScore()
     int pNumber = personalNumber(initialScore, 1975);
     if (pNumber > 7)
     {
-		quantity = (int)ceil(1.2 * this->quantity);
+        quantity = (int)ceil(1.2 * this->quantity);
     }
     else if (pNumber < 3)
     {
         quantity = (int)ceil(0.9 * this->quantity);
-		if (this->quantity < 0)
-			this->quantity = 0;
+        if (this->quantity < 0)
+            this->quantity = 0;
     }
     return typeValue * 56 + quantity * weight + extraScore;
 }
@@ -736,9 +736,9 @@ void LiberationArmy::fight(Army *enemy, bool defense)
     }
     float liberationLF = ceil(LF * (defense ? 1.3 : 1.5));
     float liberationEXP = ceil(EXP * (defense ? 1.3 : 1.5));
-    LF =  ceil(LF * (defense ? 1.3 : 1.5));
-	EXP = ceil(EXP * (defense ? 1.3 : 1.5));
-    
+    LF = ceil(LF * (defense ? 1.3 : 1.5));
+    EXP = ceil(EXP * (defense ? 1.3 : 1.5));
+
     float enemyLF = enemy->getLF();
     float enemyEXP = enemy->getExp();
 
@@ -841,6 +841,15 @@ UnitList::~UnitList()
 {
     clear();
 }
+Node *UnitList::getHead()
+{
+    return head;
+}
+
+void UnitList::setHead(Node *newHead)
+{
+    this->head = newHead;
+}
 
 bool UnitList::isContain(VehicleType vehicleType)
 {
@@ -935,6 +944,17 @@ bool UnitList::insert(Unit *unit)
     }
     size++;
     return true;
+}
+bool UnitList::isExit(Unit *unit)
+{
+    Node *temp = head;
+    while (temp != nullptr)
+    {
+        if (temp->unit == unit)
+            return true;
+        temp = temp->next;
+    }
+    return false;
 }
 
 string UnitList::str() const
@@ -1120,36 +1140,85 @@ ARVN::ARVN(Unit **unitArray, int size, string name, BattleField *battleField)
 
 void ARVN::fight(Army *enemy, bool defense)
 {
-    if (!enemy || !unitList)
+    if (!unitList || !enemy)
         return;
-    float multiplier = defense ? 0.8f : 1.0f;
-    for (Unit *unit : unitList->getAllUnits())
+
+    if (!defense)
     {
-        int score = unit->getAttackScore();
-        int reduction = static_cast<int>(enemy->getExp() * 0.1);
-        unit->setWeight(unit->getWeight() - reduction / unit->getQuantity());
+        Node *current = unitList->getHead();
+        Node *prev = nullptr;
+        while (current != nullptr)
+        {
+            int q = current->unit->getQuantity();
+            current->unit->setQuantity(static_cast<int>(ceil(1.0 * 0.8 * q)));
+
+            if (current->unit->getQuantity() <= 1)
+            {
+                Node *erase = current;
+
+                if (!prev)
+                {
+                    unitList->setHead(current->next);
+                    current = current->next;
+                }
+                else
+                {
+                    prev->next = current->next;
+                    current = current->next;
+                }
+                delete erase;
+                continue;
+            }
+            prev = current;
+            current = current->next;
+        }
+        this->recalcIndices();
     }
-    LF = 0;
-    EXP = 0;
-    for (Unit *unit : unitList->getAllUnits())
+
+    else if (defense)
     {
-        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+        if (!unitList || !unitList->getHead())
         {
-            LF += vehicle->getAttackScore();
+            this->setLF(0);
+            this->setExp(0);
+
+            return;
         }
-        else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+        Node *current = unitList->getHead();
+
+        if (!enemy || !enemy->getUnitList())
+            return;
+        UnitList *unit = enemy->getUnitList();
+
+        if (unit->isExit(current->unit))
         {
-            EXP += infantry->getAttackScore();
+            int q = current->unit->getWeight();
+            current->unit->setWeight(ceil(0.8 * q));
         }
+        else
+        {
+            Node *erase = current;
+            current = current->next;
+            delete erase;
+            unitList->setHead(current);
+        }
+        while (current != nullptr && current->next != nullptr)
+        {
+            if (!unit->isExit(current->next->unit))
+            {
+                Node *erase = current->next;
+                current->next = current->next->next;
+                delete erase;
+            }
+            else
+            {
+                int w = current->next->unit->getWeight();
+                current->next->unit->setWeight(ceil(0.8 * w));
+            }
+            current = current->next;
+        }
+        this->recalcIndices();
     }
-    if (LF > 1000)
-        LF = 1000;
-    if (LF < 0)
-        LF = 0;
-    if (EXP > 500)
-        EXP = 500;
-    if (EXP < 0)
-        EXP = 0;
 }
 void ARVN::recalcIndices()
 {

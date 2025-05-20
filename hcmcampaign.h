@@ -197,6 +197,7 @@ public:
     bool insert(Unit *unit);
     bool isContain(VehicleType vehicleType);
     bool isContain(InfantryType infantryType);
+    bool isExit(Unit *unit);
     Node *getHead();
     void setHead(Node *newHead);
     string str() const;
