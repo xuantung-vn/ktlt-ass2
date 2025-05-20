@@ -78,11 +78,8 @@ public:
     void setExp(int exp);
 };
 bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bool &isVehicle);
-vector<Position *> parseTerrainArray(const string &value);
 string trim(const string &s);
 double euclideanDistance(const Position &p1, const Position &p2);
-int nextFibonacci(int n);
-bool isSpecialNumber(int n, int k);
 
 class LiberationArmy : public Army
 {
@@ -99,6 +96,7 @@ public:
     void eliminateAllInfantry();
     void eliminateAllVehicles();
     void reduceAllUnitsWeight(int percentage);
+    int nextFibonacci(int n);
     void reinforceUnitsWithFibonacci();
 };
 
@@ -203,6 +201,7 @@ public:
     string str() const;
     vector<Unit *> getAllUnits() const;
     void removeUnit(Unit *unit);
+    bool isSpecialNumber(int n, int k);
     void clear();
     ~UnitList();
 };

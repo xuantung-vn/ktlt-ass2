@@ -4,7 +4,6 @@
 /// STUDENT'S ANSWER BEGINS HERE
 ////////////////////////////////////////////////////////////////////////
 
-// Helper function to convert string to uppercase
 string toUpper(const string &s)
 {
     string result = s;
@@ -16,50 +15,6 @@ string toUpper(const string &s)
         }
     }
     return result;
-}
-// Helper
-int nextFibonacci(int n)
-{
-    if (n <= 1)
-        return 1;
-    int a = 1, b = 1;
-    while (b < n)
-    {
-        int temp = b;
-        b = a + b;
-        a = temp;
-    }
-    return b;
-}
-
-bool isSpecialNumber(int n, int k)
-{
-    if (n < 0)
-        return false;
-    vector<int> powers;
-    int power = 1;
-    while (power <= n)
-    {
-        powers.push_back(power);
-        if (power > n / k)
-            break;
-        power *= k;
-    }
-    int m = powers.size();
-    for (int mask = 0; mask < (1 << m); mask++)
-    {
-        int sum = 0;
-        for (int i = 0; i < m; i++)
-        {
-            if (mask & (1 << i))
-            {
-                sum += powers[i];
-            }
-        }
-        if (sum == n)
-            return true;
-    }
-    return false;
 }
 
 string trim(const string &s)
@@ -279,50 +234,8 @@ void parseStringToPosition(const string &key, string val, vector<Position *> &ta
     }
 }
 
-vector<Position *> parseTerrainArray(const string &value)
-{
-    vector<Position *> positions;
-    string cleaned = trim(value);
-    if (cleaned.empty() || cleaned.size() < 2 || cleaned[0] != '[' || cleaned.back() != ']')
-    {
-        return positions;
-    }
-    string inner = trim(cleaned.substr(1, cleaned.size() - 2));
-    if (inner.empty())
-    {
-        return positions;
-    }
-    stringstream ss(inner);
-    string posStr;
-    while (getline(ss, posStr, ','))
-    {
-        posStr = trim(posStr);
-        if (posStr.empty())
-            continue;
-        try
-        {
-            Position *pos = new Position(posStr);
-            if (pos->getRow() != 0 || pos->getCol() != 0 || posStr == "(0,0)")
-            {
-                positions.push_back(pos);
-            }
-            else
-            {
-                delete pos;
-            }
-        }
-        catch (...)
-        {
-            continue;
-        }
-    }
-    return positions;
-}
-
 Unit::Unit(int quantity, int weight, const Position pos)
     : quantity(quantity), weight(weight), pos(pos) {}
-
-Unit::~Unit() {}
 
 int Unit::getAttackScore() { return 0; }
 
@@ -350,10 +263,12 @@ Position Unit::getCurrentPosition() const
     return pos;
 }
 
+Unit::~Unit() {}
+// Unit END HERE
+
+// Vehicle START HERE
 Vehicle::Vehicle(int quantity, int weight, const Position pos, VehicleType vehicleType)
     : Unit(quantity, weight, pos), vehicleType(vehicleType) {}
-
-Vehicle::~Vehicle() {}
 
 int Vehicle::getAttackScore()
 {
@@ -393,10 +308,12 @@ string Vehicle::str() const
 
 VehicleType Vehicle::getVehicleType() const { return vehicleType; }
 
+Vehicle::~Vehicle() {}
+// Vehicle END HERE
+
+// Infantry START HERE
 Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType infantryType)
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
-
-Infantry::~Infantry() {}
 
 bool Infantry::isPerfectSquare(int n) const
 {
@@ -475,6 +392,11 @@ string Infantry::str() const
     return ss.str();
 }
 
+Infantry::~Infantry() {}
+
+// Infantry END HERE
+
+// Army START HERE
 Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
     : name(name), battleField(battleField), LF(0), EXP(0)
 {
@@ -510,10 +432,9 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
             }
         }
     }
-    LF = std::min(LF, 1000);
-    EXP = std::min(EXP, 500);
+    LF = min(LF, 1000);
+    EXP = min(EXP, 500);
 }
-Army::~Army() { delete unitList; }
 
 int Army::getLF() { return LF; }
 
@@ -525,6 +446,10 @@ void Army::setExp(int exp) { EXP = exp; }
 
 UnitList *Army::getUnitList() const { return unitList; }
 
+Army::~Army() { delete unitList; }
+// Army END HERE
+
+// LiberationArmy START HERE
 LiberationArmy::LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField)
     : Army(unitArray, size, name, battleField) {}
 
@@ -540,8 +465,6 @@ string LiberationArmy::str() const
     //    << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
     return ss.str();
 }
-
-LiberationArmy::~LiberationArmy() {}
 
 void LiberationArmy::removeUnit(Unit *unit)
 {
@@ -605,6 +528,7 @@ void LiberationArmy::confiscateEnemyUnits(Army *enemy)
     enemy->setLF(0);
     enemy->setExp(0);
 }
+
 vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
 {
     vector<Unit *> infantry;
@@ -719,6 +643,20 @@ void LiberationArmy::reduceAllUnitsWeight(int percentage)
     }
 }
 
+int LiberationArmy::nextFibonacci(int n)
+{
+    if (n <= 1)
+        return 1;
+    int a = 1, b = 1;
+    while (b < n)
+    {
+        int temp = b;
+        b = a + b;
+        a = temp;
+    }
+    return b;
+}
+
 void LiberationArmy::reinforceUnitsWithFibonacci()
 {
     for (Unit *unit : unitList->getAllUnits())
@@ -808,6 +746,10 @@ void LiberationArmy::fight(Army *enemy, bool defense)
     }
 }
 
+LiberationArmy::~LiberationArmy() {}
+// LiberationArmy END HERE
+
+// UnitList START HERE
 UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size(0)
 {
     int S = armyLF + armyEXP;
@@ -823,24 +765,6 @@ UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size
     capacity = isSpecial ? 12 : 8;
 }
 
-void UnitList::clear()
-{
-    Node *current = head;
-    while (current)
-    {
-        Node *next = current->next;
-        delete current->unit; // Delete the Unit object
-        delete current;       // Delete the Node
-        current = next;
-    }
-    head = tail = nullptr;
-    size = 0;
-}
-
-UnitList::~UnitList()
-{
-    clear();
-}
 Node *UnitList::getHead()
 {
     return head;
@@ -945,6 +869,7 @@ bool UnitList::insert(Unit *unit)
     size++;
     return true;
 }
+
 bool UnitList::isExit(Unit *unit)
 {
     Node *temp = head;
@@ -953,6 +878,36 @@ bool UnitList::isExit(Unit *unit)
         if (temp->unit == unit)
             return true;
         temp = temp->next;
+    }
+    return false;
+}
+
+bool UnitList::isSpecialNumber(int n, int k)
+{
+    if (n < 0)
+        return false;
+    vector<int> powers;
+    int power = 1;
+    while (power <= n)
+    {
+        powers.push_back(power);
+        if (power > n / k)
+            break;
+        power *= k;
+    }
+    int m = powers.size();
+    for (int mask = 0; mask < (1 << m); mask++)
+    {
+        int sum = 0;
+        for (int i = 0; i < m; i++)
+        {
+            if (mask & (1 << i))
+            {
+                sum += powers[i];
+            }
+        }
+        if (sum == n)
+            return true;
     }
     return false;
 }
@@ -1004,6 +959,7 @@ vector<Unit *> UnitList::getAllUnits() const
     }
     return result;
 }
+
 void UnitList::removeUnit(Unit *unit)
 {
     Node *current = head;
@@ -1077,6 +1033,27 @@ string UnitList::infantryTypeToString(InfantryType type) const
     }
 }
 
+void UnitList::clear()
+{
+    Node *current = head;
+    while (current)
+    {
+        Node *next = current->next;
+        delete current->unit; // Delete the Unit object
+        delete current;       // Delete the Node
+        current = next;
+    }
+    head = tail = nullptr;
+    size = 0;
+}
+
+UnitList::~UnitList()
+{
+    clear();
+}
+// UnitList END HERE
+
+// Position START HERE
 Position::Position(int r, int c) : r(r), c(c) {}
 
 Position::Position(const string &str_pos)
@@ -1132,7 +1109,9 @@ string Position::str() const
     ss << "(" << r << "," << c << ")";
     return ss.str();
 }
+// Position END HERE
 
+// ARVN START HERE
 ARVN::ARVN(Unit **unitArray, int size, string name, BattleField *battleField)
     : Army(unitArray, size, name, battleField)
 {
@@ -1256,7 +1235,9 @@ string ARVN::str() const
 }
 
 ARVN::~ARVN() {}
+// ARVN END HERE
 
+// TerrainElement START HERE
 TerrainElement::~TerrainElement() {}
 
 Road::Road() {}
@@ -1310,15 +1291,11 @@ void Mountain::getEffect(Army *army)
     }
 
     int newLF = army->getLF() + deltaLF;
+    newLF = newLF < 0 ? 0 : newLF > 1000 ? 1000
+                                         : newLF;
     int newEXP = army->getExp() + deltaEXP;
-    if (newLF > 1000)
-        newLF = 1000;
-    if (newLF < 0)
-        newLF = 0;
-    if (newEXP > 500)
-        newEXP = 500;
-    if (newEXP < 0)
-        newEXP = 0;
+    newEXP = newEXP < 0 ? 0 : newEXP > 1000 ? 1000
+                                            : newEXP;
     army->setLF(newLF);
     army->setExp(newEXP);
 }
@@ -1403,15 +1380,13 @@ void Urban::getEffect(Army *army)
     }
 
     int newLF = army->getLF() + deltaLF;
+    newLF = newLF < 0 ? 0 : newLF > 1000 ? 1000
+                                         : newLF;
     int newEXP = army->getExp() + deltaEXP;
-    if (newLF > 1000)
-        newLF = 1000;
-    if (newLF < 0)
-        newLF = 0;
-    if (newEXP > 500)
-        newEXP = 500;
-    if (newEXP < 0)
-        newEXP = 0;
+    newEXP = newEXP < 0 ? 0 : newEXP > 1000 ? 1000
+                                            : newEXP;
+    army->setLF(newLF);
+    army->setExp(newEXP);
     army->setLF(newLF);
     army->setExp(newEXP);
 }
@@ -1455,17 +1430,12 @@ void Fortification::getEffect(Army *army)
             }
         }
     }
-
     int newLF = army->getLF() + deltaLF;
+    newLF = newLF < 0 ? 0 : newLF > 1000 ? 1000
+                                         : newLF;
     int newEXP = army->getExp() + deltaEXP;
-    if (newLF > 1000)
-        newLF = 1000;
-    if (newLF < 0)
-        newLF = 0;
-    if (newEXP > 500)
-        newEXP = 500;
-    if (newEXP < 0)
-        newEXP = 0;
+    newEXP = newEXP < 0 ? 0 : newEXP > 1000 ? 1000
+                                            : newEXP;
     army->setLF(newLF);
     army->setExp(newEXP);
 }
@@ -1497,19 +1467,17 @@ void SpecialZone::getEffect(Army *army)
     }
 
     int newLF = army->getLF() + deltaLF;
+    newLF = newLF < 0 ? 0 : newLF > 1000 ? 1000
+                                         : newLF;
     int newEXP = army->getExp() + deltaEXP;
-    if (newLF > 1000)
-        newLF = 1000;
-    if (newLF < 0)
-        newLF = 0;
-    if (newEXP > 500)
-        newEXP = 500;
-    if (newEXP < 0)
-        newEXP = 0;
+    newEXP = newEXP < 0 ? 0 : newEXP > 1000 ? 1000
+                                            : newEXP;
     army->setLF(newLF);
     army->setExp(newEXP);
 }
+// TerrainElement END HERE
 
+// BattleField START HERE
 BattleField::BattleField(int n_rows, int n_cols,
                          vector<Position *> arrayForest,
                          vector<Position *> arrayRiver,
@@ -1576,6 +1544,11 @@ string BattleField::str() const
     return ss.str();
 }
 
+const vector<vector<TerrainElement *>> &BattleField::getTerrain() const
+{
+    return terrain;
+}
+
 BattleField::~BattleField()
 {
     for (int i = 0; i < n_rows; ++i)
@@ -1586,11 +1559,9 @@ BattleField::~BattleField()
         }
     }
 }
+// BattleField START HERE
 
-const vector<vector<TerrainElement *>> &BattleField::getTerrain() const
-{
-    return terrain;
-}
+// Configuration END HERE
 
 Configuration::Configuration(const string &filepath)
 {
@@ -1821,23 +1792,6 @@ string Configuration::str() const
     return ss.str();
 }
 
-Configuration::~Configuration()
-{
-    for (Position *pos : arrayForest)
-        delete pos;
-    for (Position *pos : arrayRiver)
-        delete pos;
-    for (Position *pos : arrayFortification)
-        delete pos;
-    for (Position *pos : arrayUrban)
-        delete pos;
-    for (Position *pos : arraySpecialZone)
-        delete pos;
-
-    liberationUnits.clear();
-    ARVNUnits.clear();
-}
-
 vector<Position *> Configuration::getArrayForest() const
 {
     return arrayForest;
@@ -1873,6 +1827,24 @@ vector<Unit *> Configuration::getARVNUnits() const
     return ARVNUnits;
 }
 
+Configuration::~Configuration()
+{
+    for (Position *pos : arrayForest)
+        delete pos;
+    for (Position *pos : arrayRiver)
+        delete pos;
+    for (Position *pos : arrayFortification)
+        delete pos;
+    for (Position *pos : arrayUrban)
+        delete pos;
+    for (Position *pos : arraySpecialZone)
+        delete pos;
+
+    liberationUnits.clear();
+    ARVNUnits.clear();
+}
+
+// Configuration END HERE
 HCMCampaign::HCMCampaign(const string &config_file_path)
 {
     config = new Configuration(config_file_path);
