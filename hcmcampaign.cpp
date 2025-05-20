@@ -32,10 +32,10 @@ string trim(const string &s)
     return result;
 }
 
-double euclideanDistance(const Position &p1, const Position &p2)
+double Position::euclideanDistance(const Position &p2)
 {
-    int dr = p1.getRow() - p2.getRow();
-    int dc = p1.getCol() - p2.getCol();
+    int dr = this->getRow() - p2.getRow();
+    int dc = this->getCol() - p2.getCol();
     return sqrt(dr * dr + dc * dc);
 }
 
@@ -67,7 +67,7 @@ bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bo
     return false;
 }
 
-Unit *parseUnit(const string &unitStr, bool &isLebsArmy)
+Unit *Configuration::parseUnit(const string &unitStr, bool &isLebsArmy)
 {
     int quantity = 0;
     float weight = 0.0f;
@@ -189,51 +189,6 @@ Unit *parseUnit(const string &unitStr, bool &isLebsArmy)
     return unit;
 }
 
-void parseStringToPosition(const string &key, string val, vector<Position *> &target)
-{
-    if (key != "ARRAY_FOREST" && key != "ARRAY_RIVER" &&
-            key != "ARRAY_FORTIFICATION" && key != "ARRAY_URBAN" &&
-            key != "ARRAY_SPECIAL_ZONE" ||
-        val.empty())
-    {
-        return;
-    }
-
-    if (val.front() == '[')
-        val.erase(0, 1);
-    if (val.back() == ']')
-        val.pop_back();
-
-    size_t start = 0;
-    while (start < val.size())
-    {
-        size_t left = val.find('(', start);
-        size_t right = val.find(')', left);
-        if (left == string::npos || right == string::npos)
-            break;
-
-        string pair = val.substr(left + 1, right - left - 1);
-        size_t comma = pair.find(',');
-        if (comma != string::npos)
-        {
-            try
-            {
-                int row = stoi(pair.substr(0, comma));
-                int col = stoi(pair.substr(comma + 1));
-                target.push_back(new Position(row, col));
-            }
-            catch (...)
-            {
-            }
-        }
-        start = right + 1;
-        while (start < val.size() && (val[start] == ',' || isspace(val[start])))
-        {
-            ++start;
-        }
-    }
-}
-
 Unit::Unit(int quantity, int weight, const Position pos)
     : quantity(quantity), weight(weight), pos(pos) {}
 
@@ -270,6 +225,12 @@ Unit::~Unit() {}
 Vehicle::Vehicle(int quantity, int weight, const Position pos, VehicleType vehicleType)
     : Unit(quantity, weight, pos), vehicleType(vehicleType) {}
 
+string Vehicle::className() const
+{
+    stringstream ss;
+    ss << "Vehicle";
+    return ss.str();
+}
 int Vehicle::getAttackScore()
 {
     return ceil(1.0 * (static_cast<int>(vehicleType) * 304 + quantity * weight) / 30);
@@ -308,13 +269,24 @@ string Vehicle::str() const
 
 VehicleType Vehicle::getVehicleType() const { return vehicleType; }
 
+Unit *Vehicle::clone() const
+{
+    return new Vehicle(this->quantity, this->weight, this->pos, this->vehicleType);
+}
+
 Vehicle::~Vehicle() {}
 // Vehicle END HERE
 
 // Infantry START HERE
 Infantry::Infantry(int quantity, int weight, const Position pos, InfantryType infantryType)
     : Unit(quantity, weight, pos), infantryType(infantryType) {}
+string Infantry::className() const
+{
+    stringstream ss;
 
+    ss << "Infantry";
+    return ss.str();
+}
 bool Infantry::isPerfectSquare(int n) const
 {
     if (n < 0)
@@ -382,6 +354,11 @@ string Infantry::getStringType() const
     default:
         return "UNKNOWN";
     }
+}
+
+Unit *Infantry ::clone() const
+{
+    return new Infantry(this->quantity, this->weight, this->pos, this->infantryType);
 }
 
 string Infantry::str() const
@@ -457,151 +434,91 @@ string LiberationArmy::str() const
 {
     stringstream ss;
     ss << "LiberationArmy["
-       << "LF=" << LF;
-    // ss << "LiberationArmy["
-    //    << "LF=" << LF
-    //    << ",EXP=" << EXP
-    //    << ",unitList=" << (unitList ? unitList->str() : "null")
-    //    << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
+       << "LF=" << LF
+       << ",EXP=" << EXP
+       << ",unitList=" << (unitList ? unitList->str() : "null")
+       << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
     return ss.str();
 }
 
-void LiberationArmy::removeUnit(Unit *unit)
+void Army::removeUnit(Unit *unit)
 {
     unitList->removeUnit(unit);
 }
 
-void LiberationArmy::recalcIndices()
+void Army::recalcIndices()
 {
-    LF = 0;
-    EXP = 0;
+    if (!unitList || !unitList->getHead())
+    {
+        LF = 0;
+        EXP = 0;
+        return;
+    }
+    int vehicleScore = 0, infantryScore = 0;
     for (Unit *unit : unitList->getAllUnits())
     {
         if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
         {
-            LF += vehicle->getAttackScore();
-            if (LF > 1000)
-                LF = 1000;
-            if (LF < 0)
-                LF = 0;
+            vehicleScore += vehicle->getAttackScore();
         }
         else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
         {
-            EXP += infantry->getAttackScore();
-            if (EXP > 500)
-                EXP = 500;
-            if (EXP < 0)
-                EXP = 0;
+            infantryScore += infantry->getAttackScore();
         }
     }
+    LF = min(1000, vehicleScore);
+    EXP = min(500, infantryScore);
+    int sum = LF + EXP;
+    this->unitList->setCapacity(unitList->isSpecialNumber(sum) ? 12 : 8);
 }
 
-void LiberationArmy::confiscateEnemyUnits(Army *enemy)
+void Army::confiscateEnemyUnits(Army *enemy)
 {
     if (!enemy || !enemy->getUnitList())
     {
         return;
     }
-    auto enemyUnits = enemy->getUnitList()->getAllUnits();
-    for (Unit *unit : enemyUnits)
+    Node *head1 = enemy->getUnitList()->getHead();
+    vector<Unit *> dao_list;
+    while (head1 != nullptr)
     {
-        if (!unit)
-            continue;
-        Unit *unitCopy = nullptr;
-        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
-        {
-            unitCopy = new Vehicle(*vehicle);
-        }
-        else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
-        {
-            unitCopy = new Infantry(*infantry);
-        }
-        if (unitCopy)
-        {
-            if (!unitList->insert(unitCopy))
-            {
-                delete unitCopy;
-            }
-        }
+        Unit *unitClone = head1->unit->clone();
+        dao_list.push_back(unitClone);
+        head1 = head1->next;
     }
-    enemy->getUnitList()->clear();
-    enemy->setLF(0);
-    enemy->setExp(0);
+    for (int i = dao_list.size() - 1; i >= 0; i--)
+    {
+        this->unitList->insert(dao_list[i]);
+    }
+    enemy->getUnitList()->setHead(nullptr);
 }
 
-vector<Unit *> LiberationArmy::findSmallestInfantryCombGreaterThan(int enemyEXP)
+vector<Unit *> LiberationArmy::findSmallestComb(const vector<Unit *> &units, int target)
 {
-    vector<Unit *> infantry;
-    vector<Unit *> result;
-    int minScore = INT_MAX;
+    vector<Unit *> bestSubset;
+    int minSum = INT_MAX;
+    int n = units.size();
+    int sum = 0;
 
-    for (Unit *unit : unitList->getAllUnits())
+    int left = 0;
+    for (int right = 0; right < n; right++)
     {
-        if (dynamic_cast<Infantry *>(unit))
+        sum += units[right]->getAttackScore();
+        Unit *unit_clone = units[right]->clone();
+        bestSubset.push_back(unit_clone);
+        if (sum > target)
         {
-            infantry.push_back(unit);
-        }
-    }
-
-    int n = infantry.size();
-    for (int mask = 1; mask < (1 << n); mask++)
-    {
-        int score = 0;
-        vector<Unit *> temp;
-        for (int i = 0; i < n; i++)
-        {
-            if (mask & (1 << i))
+            while (sum - units[left]->getAttackScore() > target)
             {
-                score += dynamic_cast<Infantry *>(infantry[i])->getAttackScore();
-                temp.push_back(infantry[i]);
+                sum -= units[left++]->getAttackScore();
+                bestSubset.erase(bestSubset.begin());
             }
-        }
-        if (score > enemyEXP && score < minScore)
-        {
-            minScore = score;
-            result = temp;
+            break;
         }
     }
-    return result;
+    return bestSubset;
 }
-
-vector<Unit *> LiberationArmy::findSmallestVehicleCombGreaterThan(int enemyLF)
-{
-    vector<Unit *> vehicles;
-    vector<Unit *> result;
-    int minScore = INT_MAX;
-
-    for (Unit *unit : unitList->getAllUnits())
-    {
-        if (dynamic_cast<Vehicle *>(unit))
-        {
-            vehicles.push_back(unit);
-        }
-    }
-
-    int n = vehicles.size();
-    for (int mask = 1; mask < (1 << n); mask++)
-    {
-        int score = 0;
-        vector<Unit *> temp;
-        for (int i = 0; i < n; i++)
-        {
-            if (mask & (1 << i))
-            {
-                score += dynamic_cast<Vehicle *>(vehicles[i])->getAttackScore();
-                temp.push_back(vehicles[i]);
-            }
-        }
-        if (score > enemyLF && score < minScore)
-        {
-            minScore = score;
-            result = temp;
-        }
-    }
-    return result;
-}
-
-void LiberationArmy::eliminateAllInfantry()
+void Army::eliminateAllInfantry()
 {
     vector<Unit *> toRemove;
     for (Unit *unit : unitList->getAllUnits())
@@ -617,7 +534,7 @@ void LiberationArmy::eliminateAllInfantry()
     }
 }
 
-void LiberationArmy::eliminateAllVehicles()
+void Army::eliminateAllVehicles()
 {
     vector<Unit *> toRemove;
     for (Unit *unit : unitList->getAllUnits())
@@ -633,7 +550,7 @@ void LiberationArmy::eliminateAllVehicles()
     }
 }
 
-void LiberationArmy::reduceAllUnitsWeight(int percentage)
+void Army::reduceAllUnitsWeight(int percentage)
 {
     for (Unit *unit : unitList->getAllUnits())
     {
@@ -643,7 +560,7 @@ void LiberationArmy::reduceAllUnitsWeight(int percentage)
     }
 }
 
-int LiberationArmy::nextFibonacci(int n)
+int Army::nextFibonacci(int n)
 {
     if (n <= 1)
         return 1;
@@ -657,7 +574,7 @@ int LiberationArmy::nextFibonacci(int n)
     return b;
 }
 
-void LiberationArmy::reinforceUnitsWithFibonacci()
+void Army::reinforceUnitsWithFibonacci()
 {
     for (Unit *unit : unitList->getAllUnits())
     {
@@ -665,104 +582,291 @@ void LiberationArmy::reinforceUnitsWithFibonacci()
         unit->setQuantity(nextFibonacci(q));
     }
 }
-
 void LiberationArmy::fight(Army *enemy, bool defense)
 {
     if (!enemy || !unitList || !enemy->getUnitList() || unitList->getAllUnits().empty())
     {
         return;
     }
-    float liberationLF = ceil(LF * (defense ? 1.3 : 1.5));
-    float liberationEXP = ceil(EXP * (defense ? 1.3 : 1.5));
-    LF = ceil(LF * (defense ? 1.3 : 1.5));
-    EXP = ceil(EXP * (defense ? 1.3 : 1.5));
 
-    float enemyLF = enemy->getLF();
-    float enemyEXP = enemy->getExp();
+    float multiplier = defense ? 1.3f : 1.5f;
+    float liberationLF = ceil(LF * multiplier);
+    float liberationEXP = ceil(EXP * multiplier);
+    LF = liberationLF;
+    EXP = liberationEXP;
+
+    int enemyLF = enemy->getLF();
+    int enemyEXP = enemy->getExp();
 
     if (defense)
     {
         if (liberationLF >= enemyLF && liberationEXP >= enemyEXP)
         {
+            // Both indices are sufficient: victory
             confiscateEnemyUnits(enemy);
             recalcIndices();
         }
         else if (liberationLF < enemyLF && liberationEXP < enemyEXP)
         {
+            // Both indices are lower: reinforce with Fibonacci
             reinforceUnitsWithFibonacci();
             recalcIndices();
-            liberationLF = ceil(LF * 1.3);
-            liberationEXP = ceil(EXP * 1.3);
+            // Re-evaluate after reinforcement
+            liberationLF = ceil(LF * 1.3f);
+            liberationEXP = ceil(EXP * 1.3f);
+            LF = liberationLF;
+            EXP = liberationEXP;
             if (liberationLF >= enemyLF && liberationEXP >= enemyEXP)
             {
                 confiscateEnemyUnits(enemy);
+                recalcIndices();
             }
             else
             {
-                reduceAllUnitsWeight(10);
+                this->reduceAllUnitsWeight(10); // Reduce weight by 10%
+                recalcIndices();
             }
-            recalcIndices();
         }
         else
         {
-            reduceAllUnitsWeight(10);
+            // One index is lower: no loss, but reduce unit weights
+            this->reduceAllUnitsWeight(10); // Reduce weight by 10%
             recalcIndices();
         }
     }
     else
     {
-        auto combInfantry = findSmallestInfantryCombGreaterThan(enemyEXP);
-        auto combVehicle = findSmallestVehicleCombGreaterThan(enemyLF);
+        vector<Unit *> tempInfantry; // vehicle
+        vector<Unit *> tempVehicle;  // infantry
+        Node *current = unitList->getHead();
+
+        while (current != nullptr)
+        {
+            bool isVehicle = current->unit->className() == "Vehicle";
+            if (!isVehicle)
+            {
+                tempInfantry.push_back(current->unit);
+            }
+            else if (isVehicle)
+            {
+                tempVehicle.push_back(current->unit);
+            }
+            current = current->next;
+        }
+
+        vector<Unit *> combInfantry = findSmallestComb(tempInfantry, enemyEXP);
+        vector<Unit *> combVehicle = findSmallestComb(tempVehicle, enemyLF);
+
         bool hasCombInfantry = !combInfantry.empty();
         bool hasCombVehicle = !combVehicle.empty();
 
         if (hasCombInfantry && hasCombVehicle)
         {
+            // Both combinations found: victory
             for (Unit *unit : combInfantry)
-                removeUnit(unit);
+            {
+                unitList->removeUnit(unit);
+            }
             for (Unit *unit : combVehicle)
-                removeUnit(unit);
+            {
+                unitList->removeUnit(unit);
+            }
             confiscateEnemyUnits(enemy);
+            recalcIndices();
         }
         else if (hasCombInfantry && liberationLF > enemyLF)
         {
+            // Infantry combination found and LF advantage: victory
             for (Unit *unit : combInfantry)
+            {
                 removeUnit(unit);
+            }
             eliminateAllVehicles();
             confiscateEnemyUnits(enemy);
+            recalcIndices();
         }
         else if (hasCombVehicle && liberationEXP > enemyEXP)
         {
+            // Vehicle combination found and EXP advantage: victory
             for (Unit *unit : combVehicle)
+            {
                 removeUnit(unit);
+            }
             eliminateAllInfantry();
             confiscateEnemyUnits(enemy);
+            LF = enemyLF;
+            EXP = enemyEXP;
+            recalcIndices();
         }
         else
         {
-            reduceAllUnitsWeight(10);
+            // No battle occurs: reduce unit weights by 10%
+            this->reduceAllUnitsWeight(10);
+            recalcIndices();
         }
-        recalcIndices();
     }
 }
-
 LiberationArmy::~LiberationArmy() {}
 // LiberationArmy END HERE
 
+// ARVN START HERE
+ARVN::ARVN(Unit **unitArray, int size, string name, BattleField *battleField)
+    : Army(unitArray, size, name, battleField)
+{
+}
+void ARVN::clearAllUnits()
+{
+    Node *current = unitList->getHead();
+    while (current != nullptr)
+    {
+        Node *toDelete = current;
+        current = current->next;
+        delete toDelete;
+    }
+    unitList->setHead(nullptr);
+}
+void ARVN::fight(Army *enemy, bool defense)
+{
+    if (!enemy || !unitList || !enemy->getUnitList() || !unitList->getHead())
+    {
+        setLF(0);
+        setExp(0);
+        return;
+    }
+
+    // Combat indices remain unchanged in both attack and defense
+    float arvnLF = LF;
+    float arvnEXP = EXP;
+
+    int enemyLF = enemy->getLF();
+    int enemyEXP = enemy->getExp();
+
+    if (defense)
+    {
+        // // Defense logic: Liberation Army is attacking
+        // auto combInfantry = enemy->findSmallestInfantryCombGreaterThan(arvnEXP);
+        // auto combVehicle = enemy->findSmallestVehicleCombGreaterThan(arvnLF);
+        // bool hasCombInfantry = !combInfantry.empty();
+        // bool hasCombVehicle = !combVehicle.empty();
+        // if (hasCombInfantry && hasCombVehicle)
+        // {
+        //     // Liberation Army wins: confiscate all ARVN units
+        //     clearAllUnits();
+        //     // Reduce weight of any remaining units by 20%
+        //     this->reduceAllUnitsWeight(20);
+        //     recalcIndices();
+        // }
+        // else if (hasCombInfantry && enemyLF > arvnLF)
+        // {
+        //     // Liberation Army wins: confiscate all ARVN units
+        //     clearAllUnits();
+        //     // Reduce weight of any remaining units by 20%
+        //     this->reduceAllUnitsWeight(20);
+        //     recalcIndices();
+        // }
+        // else if (hasCombVehicle && enemyEXP > arvnEXP)
+        // {
+        //     // Liberation Army wins: confiscate all ARVN units
+        //     clearAllUnits();
+        //     // Reduce weight of any remaining units by 20%
+        //     this->reduceAllUnitsWeight(20);
+        //     recalcIndices();
+        // }
+        // else
+        // {
+        //     // No battle occurs: ARVN forces remain intact
+        //     // No changes to units or indices
+        // }
+    }
+    else
+    {
+        // Attack logic: ARVN loses, reduce unit quantities by 20%
+        Node *current = unitList->getHead();
+        Node *prev = nullptr;
+        while (current != nullptr)
+        {
+            Unit *unit = current->unit;
+            int quantity = unit->getQuantity();
+            unit->setQuantity(ceil(quantity * 0.8f)); // Reduce quantity by 20%
+
+            if (unit->getQuantity() <= 1)
+            {
+                Node *toDelete = current;
+                if (!prev)
+                {
+                    unitList->setHead(current->next);
+                    current = current->next;
+                }
+                else
+                {
+                    prev->next = current->next;
+                    current = current->next;
+                }
+                delete toDelete;
+                continue;
+            }
+            prev = current;
+            current = current->next;
+        }
+        // recalcIndices();
+    }
+}
+
+string ARVN::str() const
+{
+    stringstream ss;
+    ss << "ARVN["
+       << "LF=" << LF
+       << ",EXP=" << EXP
+       << ",unitList=" << (unitList ? unitList->str() : "null")
+       << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
+    return ss.str();
+}
+
+ARVN::~ARVN() {}
+// ARVN END HERE
+
 // UnitList START HERE
+bool UnitList::isSpecialNumber(int n)
+{
+    for (int k : {3, 5, 7})
+    {
+        if (n < 0)
+            return false;
+        vector<int> powers;
+        int power = 1;
+        while (power <= n)
+        {
+            powers.push_back(power);
+            if (power > n / k)
+                break;
+            power *= k;
+        }
+        int m = powers.size();
+        for (int mask = 0; mask < (1 << m); mask++)
+        {
+            int sum = 0;
+            for (int i = 0; i < m; i++)
+            {
+                if (mask & (1 << i))
+                {
+                    sum += powers[i];
+                }
+            }
+            if (sum == n)
+                return true;
+        }
+    }
+
+    return false;
+}
+
 UnitList::UnitList(int armyLF, int armyEXP) : head(nullptr), tail(nullptr), size(0)
 {
     int S = armyLF + armyEXP;
-    bool isSpecial = false;
-    for (int k : {3, 5, 7})
-    {
-        if (isSpecialNumber(S, k))
-        {
-            isSpecial = true;
-            break;
-        }
-    }
-    capacity = isSpecial ? 12 : 8;
+    bool isSpecial = UnitList::isSpecialNumber(S);
+    this->capacity = isSpecial ? 12 : 8;
+    this->head = nullptr;
 }
 
 Node *UnitList::getHead()
@@ -811,46 +915,57 @@ bool UnitList::isContain(InfantryType infantryType)
 
 bool UnitList::insert(Unit *unit)
 {
+    // Validate input and capacity
     if (!unit || size >= capacity)
+    {
+        delete unit;
         return false;
+    }
     Node *current = head;
-    while (current)
+    bool isInfantryType = unit->className() == "Infantry";
+    while (current != nullptr)
     {
         bool sameType = false;
-        bool samePos = current->unit->getCurrentPosition().str() == unit->getCurrentPosition().str();
-        if (Vehicle *v1 = dynamic_cast<Vehicle *>(current->unit))
+        stringstream stringType;
+        stringType << unit->getStringType();
+        stringstream currentstringType;
+        currentstringType << current->unit->getStringType();
+
+        if (unit->className() == current->unit->className())
         {
-            if (Vehicle *v2 = dynamic_cast<Vehicle *>(unit))
+            if (currentstringType.str() == stringType.str())
             {
-                sameType = v1->getStringType() == v2->getStringType();
+                current->unit->setQuantity(current->unit->getQuantity() + unit->getQuantity());
+                delete unit;
+                size++;
+                return true;
             }
-        }
-        else if (Infantry *i1 = dynamic_cast<Infantry *>(current->unit))
-        {
-            if (Infantry *i2 = dynamic_cast<Infantry *>(unit))
-            {
-                sameType = i1->getStringType() == i2->getStringType();
-            }
-        }
-        if (sameType && samePos)
-        {
-            current->unit->setQuantity(current->unit->getQuantity() + unit->getQuantity());
-            delete unit; // Prevent double-free
-            return true;
         }
         current = current->next;
     }
 
+    // Create new node for insertion
     Node *newNode = new Node(unit);
-    if (dynamic_cast<Infantry *>(unit))
+    if (!newNode)
     {
+        delete unit; // Free input unit on allocation failure
+        return false;
+    }
+
+    // Insert infantry at head, vehicle at tail
+    if (isInfantryType)
+    {
+        // Infantry: Insert at head
         newNode->next = head;
         head = newNode;
         if (!tail)
+        {
             tail = newNode;
+        }
     }
-    else if (dynamic_cast<Vehicle *>(unit))
+    else
     {
+        // Vehicle: Insert at tail
         if (!head)
         {
             head = tail = newNode;
@@ -861,15 +976,10 @@ bool UnitList::insert(Unit *unit)
             tail = newNode;
         }
     }
-    else
-    {
-        delete newNode;
-        return false;
-    }
-    size++;
+
+    this->size++;
     return true;
 }
-
 bool UnitList::isExit(Unit *unit)
 {
     Node *temp = head;
@@ -882,36 +992,14 @@ bool UnitList::isExit(Unit *unit)
     return false;
 }
 
-bool UnitList::isSpecialNumber(int n, int k)
+void UnitList ::setCapacity(int x)
 {
-    if (n < 0)
-        return false;
-    vector<int> powers;
-    int power = 1;
-    while (power <= n)
-    {
-        powers.push_back(power);
-        if (power > n / k)
-            break;
-        power *= k;
-    }
-    int m = powers.size();
-    for (int mask = 0; mask < (1 << m); mask++)
-    {
-        int sum = 0;
-        for (int i = 0; i < m; i++)
-        {
-            if (mask & (1 << i))
-            {
-                sum += powers[i];
-            }
-        }
-        if (sum == n)
-            return true;
-    }
-    return false;
+    this->capacity = x;
 }
-
+int UnitList ::getCapacity() const
+{
+    return this->capacity;
+}
 string UnitList::str() const
 {
     stringstream ss;
@@ -933,7 +1021,7 @@ string UnitList::str() const
     }
 
     ss << "UnitList[count_vehicle=" << vehicleCount
-       << ";count_infantry=" << infantryCount << ";";
+       << ";count_infantry=" << infantryCount << (infantryCount == 0 ? "" : ";");
 
     current = head;
     for (int i = 0; current; i++, current = current->next)
@@ -962,31 +1050,17 @@ vector<Unit *> UnitList::getAllUnits() const
 
 void UnitList::removeUnit(Unit *unit)
 {
-    Node *current = head;
-    Node *prev = nullptr;
-    while (current)
+    if (!head)
+        return;
+    while (head->next && head->next->unit != unit)
     {
-        if (current->unit == unit)
-        {
-            if (prev)
-            {
-                prev->next = current->next;
-            }
-            else
-            {
-                head = current->next;
-            }
-            if (current == tail)
-            {
-                tail = prev ? prev : head;
-            }
-            delete current;
-            size--;
-            return;
-        }
-        prev = current;
-        current = current->next;
+        head = head->next;
     }
+    if (!head->next)
+        return;
+    Node *xoa = head->next;
+    head->next = head->next->next;
+    delete xoa;
 }
 
 string UnitList::vehicleTypeToString(VehicleType type) const
@@ -1111,132 +1185,6 @@ string Position::str() const
 }
 // Position END HERE
 
-// ARVN START HERE
-ARVN::ARVN(Unit **unitArray, int size, string name, BattleField *battleField)
-    : Army(unitArray, size, name, battleField)
-{
-}
-
-void ARVN::fight(Army *enemy, bool defense)
-{
-    if (!unitList || !enemy)
-        return;
-
-    if (!defense)
-    {
-        Node *current = unitList->getHead();
-        Node *prev = nullptr;
-        while (current != nullptr)
-        {
-            int q = current->unit->getQuantity();
-            current->unit->setQuantity(static_cast<int>(ceil(1.0 * 0.8 * q)));
-
-            if (current->unit->getQuantity() <= 1)
-            {
-                Node *erase = current;
-
-                if (!prev)
-                {
-                    unitList->setHead(current->next);
-                    current = current->next;
-                }
-                else
-                {
-                    prev->next = current->next;
-                    current = current->next;
-                }
-                delete erase;
-                continue;
-            }
-            prev = current;
-            current = current->next;
-        }
-        this->recalcIndices();
-    }
-
-    else if (defense)
-    {
-        if (!unitList || !unitList->getHead())
-        {
-            this->setLF(0);
-            this->setExp(0);
-
-            return;
-        }
-        Node *current = unitList->getHead();
-
-        if (!enemy || !enemy->getUnitList())
-            return;
-        UnitList *unit = enemy->getUnitList();
-
-        if (unit->isExit(current->unit))
-        {
-            int q = current->unit->getWeight();
-            current->unit->setWeight(ceil(0.8 * q));
-        }
-        else
-        {
-            Node *erase = current;
-            current = current->next;
-            delete erase;
-            unitList->setHead(current);
-        }
-        while (current != nullptr && current->next != nullptr)
-        {
-            if (!unit->isExit(current->next->unit))
-            {
-                Node *erase = current->next;
-                current->next = current->next->next;
-                delete erase;
-            }
-            else
-            {
-                int w = current->next->unit->getWeight();
-                current->next->unit->setWeight(ceil(0.8 * w));
-            }
-            current = current->next;
-        }
-        this->recalcIndices();
-    }
-}
-void ARVN::recalcIndices()
-{
-    LF = 0;
-    EXP = 0;
-    for (Unit *unit : unitList->getAllUnits())
-    {
-        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
-        {
-            LF += vehicle->getAttackScore();
-            if (LF > 1000)
-                LF = 1000;
-            if (LF < 0)
-                LF = 0;
-        }
-        else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
-        {
-            EXP += infantry->getAttackScore();
-            if (EXP > 500)
-                EXP = 500;
-            if (EXP < 0)
-                EXP = 0;
-        }
-    }
-}
-string ARVN::str() const
-{
-    stringstream ss;
-    ss << "ARVN["
-       << "LF=" << LF
-       << ",EXP=" << EXP
-       << ",unitList=" << (unitList ? unitList->str() : "null")
-       << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
-    return ss.str();
-}
-
-ARVN::~ARVN() {}
-// ARVN END HERE
-
 // TerrainElement START HERE
 TerrainElement::~TerrainElement() {}
 
@@ -1277,7 +1225,7 @@ void Mountain::getEffect(Army *army)
     }
     for (Unit *unit : army->getUnitList()->getAllUnits())
     {
-        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+        if (pos.euclideanDistance(unit->getCurrentPosition()) <= radius)
         {
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
@@ -1313,7 +1261,7 @@ void River::getEffect(Army *army)
 
     for (Unit *unit : army->getUnitList()->getAllUnits())
     {
-        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+        if (pos.euclideanDistance(unit->getCurrentPosition()) <= radius)
         {
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
@@ -1344,7 +1292,7 @@ void Urban::getEffect(Army *army)
     {
         for (Unit *unit : army->getUnitList()->getAllUnits())
         {
-            int distance = euclideanDistance(unit->getCurrentPosition(), pos);
+            int distance = pos.euclideanDistance(unit->getCurrentPosition());
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
                 string type = infantry->getStringType();
@@ -1367,7 +1315,7 @@ void Urban::getEffect(Army *army)
     {
         for (Unit *unit : army->getUnitList()->getAllUnits())
         {
-            int distance = euclideanDistance(unit->getCurrentPosition(), pos);
+            int distance = pos.euclideanDistance(unit->getCurrentPosition());
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
                 if (infantry->getStringType() == "REGULARINFANTRY" && distance <= 3)
@@ -1418,7 +1366,8 @@ void Fortification::getEffect(Army *army)
 
     for (Unit *unit : army->getUnitList()->getAllUnits())
     {
-        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+
+        if (pos.euclideanDistance(unit->getCurrentPosition()) <= radius)
         {
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
@@ -1453,7 +1402,7 @@ void SpecialZone::getEffect(Army *army)
 
     for (Unit *unit : army->getUnitList()->getAllUnits())
     {
-        if (euclideanDistance(unit->getCurrentPosition(), pos) <= radius)
+        if (pos.euclideanDistance(unit->getCurrentPosition()) <= radius)
         {
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
@@ -1562,6 +1511,50 @@ BattleField::~BattleField()
 // BattleField START HERE
 
 // Configuration END HERE
+void Configuration::parseStringToPosition(const string &key, string val, vector<Position *> &target)
+{
+    if (key != "ARRAY_FOREST" && key != "ARRAY_RIVER" &&
+            key != "ARRAY_FORTIFICATION" && key != "ARRAY_URBAN" &&
+            key != "ARRAY_SPECIAL_ZONE" ||
+        val.empty())
+    {
+        return;
+    }
+
+    if (val.front() == '[')
+        val.erase(0, 1);
+    if (val.back() == ']')
+        val.pop_back();
+
+    size_t start = 0;
+    while (start < val.size())
+    {
+        size_t left = val.find('(', start);
+        size_t right = val.find(')', left);
+        if (left == string::npos || right == string::npos)
+            break;
+
+        string pair = val.substr(left + 1, right - left - 1);
+        size_t comma = pair.find(',');
+        if (comma != string::npos)
+        {
+            try
+            {
+                int row = stoi(pair.substr(0, comma));
+                int col = stoi(pair.substr(comma + 1));
+                target.push_back(new Position(row, col));
+            }
+            catch (...)
+            {
+            }
+        }
+        start = right + 1;
+        while (start < val.size() && (val[start] == ',' || isspace(val[start])))
+        {
+            ++start;
+        }
+    }
+}
 
 Configuration::Configuration(const string &filepath)
 {
@@ -1628,27 +1621,27 @@ Configuration::Configuration(const string &filepath)
         else if (key == "ARRAY_FOREST")
         {
             arrayForest.clear();
-            parseStringToPosition(key, value, arrayForest);
+            this->parseStringToPosition(key, value, arrayForest);
         }
         else if (key == "ARRAY_RIVER")
         {
             arrayRiver.clear();
-            parseStringToPosition(key, value, arrayRiver);
+            this->parseStringToPosition(key, value, arrayRiver);
         }
         else if (key == "ARRAY_FORTIFICATION")
         {
             arrayFortification.clear();
-            parseStringToPosition(key, value, arrayFortification);
+            this->parseStringToPosition(key, value, arrayFortification);
         }
         else if (key == "ARRAY_URBAN")
         {
             arrayUrban.clear();
-            parseStringToPosition(key, value, arrayUrban);
+            this->parseStringToPosition(key, value, arrayUrban);
         }
         else if (key == "ARRAY_SPECIAL_ZONE")
         {
             arraySpecialZone.clear();
-            parseStringToPosition(key, value, arraySpecialZone);
+            this->parseStringToPosition(key, value, arraySpecialZone);
         }
         else if (key == "UNIT_LIST")
         {
@@ -1903,7 +1896,6 @@ void HCMCampaign::run()
     }
     arvnArmy->recalcIndices();
     liberationArmy->recalcIndices();
-
     int eventCode = config->getEventCode();
     if (eventCode < 75)
     {

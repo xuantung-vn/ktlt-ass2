@@ -55,7 +55,8 @@
         "print": "cpp",
         "stdexcept": "cpp",
         "streambuf": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "__config": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

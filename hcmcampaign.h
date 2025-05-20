@@ -76,28 +76,26 @@ public:
     void setLF(int lf);
     int getExp();
     void setExp(int exp);
+    void removeUnit(Unit *unit);
+    void recalcIndices();
+    void confiscateEnemyUnits(Army *enemy);
+    void eliminateAllInfantry();
+    void eliminateAllVehicles();
+    void reduceAllUnitsWeight(int percentage);
+    int nextFibonacci(int n);
+    void reinforceUnitsWithFibonacci();
 };
 bool getUnitType(const string &name, VehicleType &vType, InfantryType &iType, bool &isVehicle);
 string trim(const string &s);
-double euclideanDistance(const Position &p1, const Position &p2);
 
 class LiberationArmy : public Army
 {
 public:
     LiberationArmy(Unit **unitArray, int size, string name, BattleField *battleField);
     virtual ~LiberationArmy();
+    vector<Unit *> findSmallestComb(const vector<Unit *> &units, int target);
     virtual string str() const;
     virtual void fight(Army *enemy, bool defense);
-    void removeUnit(Unit *unit);
-    void recalcIndices();
-    void confiscateEnemyUnits(Army *enemy);
-    vector<Unit *> findSmallestInfantryCombGreaterThan(int enemyEXP);
-    vector<Unit *> findSmallestVehicleCombGreaterThan(int enemyLF);
-    void eliminateAllInfantry();
-    void eliminateAllVehicles();
-    void reduceAllUnitsWeight(int percentage);
-    int nextFibonacci(int n);
-    void reinforceUnitsWithFibonacci();
 };
 
 class ARVN : public Army
@@ -106,7 +104,7 @@ public:
     ARVN(Unit **unitArray, int size, string name, BattleField *battleField);
     virtual void fight(Army *enemy, bool defence = false) override;
     virtual string str() const override;
-    void recalcIndices();
+    void clearAllUnits();
     virtual ~ARVN();
 };
 
@@ -123,6 +121,7 @@ public:
     void setRow(int r);
     void setCol(int c);
     string str() const;
+    double euclideanDistance(const Position &p1);
 };
 
 class Unit
@@ -137,11 +136,15 @@ public:
     virtual int getAttackScore() = 0;
     Position getCurrentPosition() const;
     virtual string str() const = 0;
+    virtual string className() const = 0;
     void setQuantity(int quan);
-    void setWeight(int w);
-    void setPos(Position pos);
     int getQuantity() const;
+    void setWeight(int w);
     int getWeight() const;
+    virtual Unit *clone() const = 0;
+    virtual string getStringType() const = 0;
+
+    void setPos(Position pos);
 };
 
 class Vehicle : public Unit
@@ -154,8 +157,10 @@ public:
     virtual ~Vehicle();
     int getAttackScore() override;
     string str() const override;
-    string getStringType() const;
+    string className() const override;
+    string getStringType() const override;
     VehicleType getVehicleType() const;
+    Unit *clone() const override;
 };
 
 class Infantry : public Unit
@@ -171,18 +176,19 @@ public:
     virtual ~Infantry();
     int getAttackScore() override;
     string str() const override;
-    string getStringType() const;
+    string className() const override;
+    string getStringType() const override;
+    Unit *clone() const override;
 };
-    struct Node
-    {
-        Unit *unit;
-        Node *next;
-        Node(Unit *u) : unit(u), next(nullptr) {}
-    };
+struct Node
+{
+    Unit *unit;
+    Node *next;
+    Node(Unit *u) : unit(u), next(nullptr) {}
+};
 class UnitList
 {
 private:
-
     Node *head;
     Node *tail;
     int capacity;
@@ -201,8 +207,11 @@ public:
     string str() const;
     vector<Unit *> getAllUnits() const;
     void removeUnit(Unit *unit);
-    bool isSpecialNumber(int n, int k);
+    bool isSpecialNumber(int n);
     void clear();
+    void setCapacity(int w);
+    int getCapacity() const;
+
     ~UnitList();
 };
 
@@ -294,8 +303,8 @@ private:
     int num_rows, num_cols;
     vector<Position *> arrayForest, arrayRiver, arrayFortification, arrayUrban, arraySpecialZone;
     int liberationUnitsSize;
-    vector<Unit*> liberationUnits;
-    vector<Unit*> ARVNUnits;
+    vector<Unit *> liberationUnits;
+    vector<Unit *> ARVNUnits;
     int ARVNUnitsSize;
     int eventCode;
 
@@ -303,19 +312,21 @@ public:
     Configuration(const string &filepath);
     string str() const;
     ~Configuration();
+    void parseStringToPosition(const string &key, string val, vector<Position *> &target);
     int getNumRows() const { return num_rows; }
     int getNumCols() const { return num_cols; }
     int getLiberationUnitsSize() const { return liberationUnitsSize; }
     int getARVNUnitsSize() const { return ARVNUnitsSize; }
     int getEventCode() const { return eventCode; }
-    
-    vector<Position*> getArrayForest() const;
-    vector<Position*> getArrayRiver() const;
-    vector<Position*> getArrayFortification() const;
-    vector<Position*> getArrayUrban() const;
-    vector<Position*> getArraySpecialZone() const;
-    vector<Unit*> getLiberationUnits() const;
-    vector<Unit*> getARVNUnits() const;
+    Unit *parseUnit(const string &unitStr, bool &isLebsArmy);
+
+    vector<Position *> getArrayForest() const;
+    vector<Position *> getArrayRiver() const;
+    vector<Position *> getArrayFortification() const;
+    vector<Position *> getArrayUrban() const;
+    vector<Position *> getArraySpecialZone() const;
+    vector<Unit *> getLiberationUnits() const;
+    vector<Unit *> getARVNUnits() const;
 };
 
 class HCMCampaign
