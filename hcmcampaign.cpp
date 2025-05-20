@@ -357,7 +357,7 @@ Vehicle::~Vehicle() {}
 
 int Vehicle::getAttackScore()
 {
-    return static_cast<int>(vehicleType) * 304 + (quantity * weight) / 30;
+    return ceil(1.0 * (static_cast<int>(vehicleType) * 304 + quantity * weight) / 30);
 }
 
 string Vehicle::getStringType() const
@@ -402,7 +402,7 @@ bool Infantry::isPerfectSquare(int n) const
 {
     if (n < 0)
         return false;
-    int root = static_cast<int>(sqrt(n));
+    int root = ceil(sqrt(n));
     return root * root == n;
 }
 
@@ -429,25 +429,21 @@ int Infantry::personalNumber(int num, int year) const
 
 int Infantry::getAttackScore()
 {
-    int typeValue = static_cast<int>(infantryType);
+    int typeValue = int(infantryType);
     int initialScore = typeValue * 56 + quantity * weight;
-    int extraScore = 0;
-    if (infantryType == SPECIALFORCES && isPerfectSquare(weight))
-    {
-        extraScore = 75;
-        initialScore += extraScore;
-    }
+    int extraScore = SPECIALFORCES && isPerfectSquare(weight) ? 75 : 0;
     int pNumber = personalNumber(initialScore, 1975);
-    int adjustedQuantity = quantity;
     if (pNumber > 7)
     {
-        adjustedQuantity = static_cast<int>(quantity * 1.2);
+		quantity = (int)ceil(1.2 * this->quantity);
     }
     else if (pNumber < 3)
     {
-        adjustedQuantity = static_cast<int>(quantity * 0.9);
+        quantity = (int)ceil(0.9 * this->quantity);
+		if (this->quantity < 0)
+			this->quantity = 0;
     }
-    return typeValue * 56 + adjustedQuantity * weight + extraScore;
+    return typeValue * 56 + quantity * weight + extraScore;
 }
 
 string Infantry::getStringType() const
@@ -484,6 +480,11 @@ Army::Army(Unit **unitArray, int size, string name, BattleField *battleField)
 {
     if (size < 0)
         size = 0;
+    this->name = name;
+    this->battleField = battleField;
+    this->LF = 0;
+    this->EXP = 0;
+
     unitList = new UnitList(LF, EXP);
     for (int i = 0; i < size && unitArray; i++)
     {
@@ -531,10 +532,12 @@ string LiberationArmy::str() const
 {
     stringstream ss;
     ss << "LiberationArmy["
-       << "LF=" << LF
-       << ",EXP=" << EXP
-       << ",unitList=" << (unitList ? unitList->str() : "null")
-       << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
+       << "LF=" << LF;
+    // ss << "LiberationArmy["
+    //    << "LF=" << LF
+    //    << ",EXP=" << EXP
+    //    << ",unitList=" << (unitList ? unitList->str() : "null")
+    //    << ",battleField=" + ((this->battleField != nullptr) ? this->battleField->str() : "]");
     return ss.str();
 }
 
@@ -711,7 +714,7 @@ void LiberationArmy::reduceAllUnitsWeight(int percentage)
     for (Unit *unit : unitList->getAllUnits())
     {
         int currentWeight = unit->getWeight();
-        int newWeight = currentWeight * (100 - percentage) / 100;
+        int newWeight = ceil(currentWeight * (100 - percentage) / 100);
         unit->setWeight(newWeight);
     }
 }
@@ -731,8 +734,11 @@ void LiberationArmy::fight(Army *enemy, bool defense)
     {
         return;
     }
-    float liberationLF = LF * (defense ? 1.3f : 1.5f);
-    float liberationEXP = EXP * (defense ? 1.3f : 1.5f);
+    float liberationLF = ceil(LF * (defense ? 1.3 : 1.5));
+    float liberationEXP = ceil(EXP * (defense ? 1.3 : 1.5));
+    LF =  ceil(LF * (defense ? 1.3 : 1.5));
+	EXP = ceil(EXP * (defense ? 1.3 : 1.5));
+    
     float enemyLF = enemy->getLF();
     float enemyEXP = enemy->getExp();
 
@@ -747,8 +753,8 @@ void LiberationArmy::fight(Army *enemy, bool defense)
         {
             reinforceUnitsWithFibonacci();
             recalcIndices();
-            liberationLF = getLF() * 1.3f;
-            liberationEXP = getExp() * 1.3f;
+            liberationLF = ceil(LF * 1.3);
+            liberationEXP = ceil(EXP * 1.3);
             if (liberationLF >= enemyLF && liberationEXP >= enemyEXP)
             {
                 confiscateEnemyUnits(enemy);
@@ -1145,7 +1151,30 @@ void ARVN::fight(Army *enemy, bool defense)
     if (EXP < 0)
         EXP = 0;
 }
-
+void ARVN::recalcIndices()
+{
+    LF = 0;
+    EXP = 0;
+    for (Unit *unit : unitList->getAllUnits())
+    {
+        if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
+        {
+            LF += vehicle->getAttackScore();
+            if (LF > 1000)
+                LF = 1000;
+            if (LF < 0)
+                LF = 0;
+        }
+        else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
+        {
+            EXP += infantry->getAttackScore();
+            if (EXP > 500)
+                EXP = 500;
+            if (EXP < 0)
+                EXP = 0;
+        }
+    }
+}
 string ARVN::str() const
 {
     stringstream ss;
@@ -1202,11 +1231,11 @@ void Mountain::getEffect(Army *army)
         {
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
-                deltaEXP += static_cast<int>(infantry->getAttackScore() * expMultiplier);
+                deltaEXP += static_cast<int>(ceil(infantry->getAttackScore() * expMultiplier));
             }
             else if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
             {
-                deltaLF += static_cast<int>(vehicle->getAttackScore() * lfMultiplier);
+                deltaLF += static_cast<int>(ceil(vehicle->getAttackScore() * lfMultiplier));
             }
         }
     }
@@ -1242,7 +1271,7 @@ void River::getEffect(Army *army)
         {
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
-                deltaEXP += static_cast<int>(infantry->getAttackScore() * multiplier);
+                deltaEXP += static_cast<int>(ceil(infantry->getAttackScore() * multiplier));
             }
         }
     }
@@ -1276,14 +1305,14 @@ void Urban::getEffect(Army *army)
                 if ((type == "SPECIALFORCES" || type == "REGULARINFANTRY") && distance <= 5)
                 {
                     int D = distance == 0 ? 1 : distance;
-                    deltaEXP += static_cast<int>(2.0 * infantry->getAttackScore() / D);
+                    deltaEXP += static_cast<int>(ceil(2.0 * infantry->getAttackScore() / D));
                 }
             }
             else if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
             {
                 if (vehicle->getStringType() == "ARTILLERY" && distance <= 2)
                 {
-                    deltaLF += static_cast<int>(vehicle->getAttackScore() * -0.5f);
+                    deltaLF += static_cast<int>(ceil(vehicle->getAttackScore() * -0.5f));
                 }
             }
         }
@@ -1298,7 +1327,7 @@ void Urban::getEffect(Army *army)
                 if (infantry->getStringType() == "REGULARINFANTRY" && distance <= 3)
                 {
                     int D = distance == 0 ? 1 : distance;
-                    deltaEXP += static_cast<int>(3.0 * infantry->getAttackScore() / (2.0 * D));
+                    deltaEXP += static_cast<int>(ceil(3.0 * infantry->getAttackScore() / (2.0 * D)));
                 }
             }
         }
@@ -1349,11 +1378,11 @@ void Fortification::getEffect(Army *army)
         {
             if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
             {
-                deltaEXP += static_cast<int>(infantry->getAttackScore() * multiplier);
+                deltaEXP += static_cast<int>(ceil(infantry->getAttackScore() * multiplier));
             }
             else if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
             {
-                deltaLF += static_cast<int>(vehicle->getAttackScore() * multiplier);
+                deltaLF += static_cast<int>(ceil(vehicle->getAttackScore() * multiplier));
             }
         }
     }
@@ -1831,16 +1860,28 @@ void HCMCampaign::run()
             }
         }
     }
+    arvnArmy->recalcIndices();
+    liberationArmy->recalcIndices();
 
     int eventCode = config->getEventCode();
     if (eventCode < 75)
     {
         liberationArmy->fight(arvnArmy, false);
+        arvnArmy->fight(liberationArmy, true);
+        arvnArmy->recalcIndices();
+        liberationArmy->recalcIndices();
     }
     else
     {
         arvnArmy->fight(liberationArmy, false);
-        liberationArmy->fight(arvnArmy, false);
+        liberationArmy->fight(arvnArmy, true);
+
+        arvnArmy->recalcIndices();
+        liberationArmy->recalcIndices();
+
+        liberationArmy->fight(arvnArmy, true);
+        arvnArmy->recalcIndices();
+        liberationArmy->recalcIndices();
     }
 
     auto removeLowScoreUnits = [](Army *army)
@@ -1863,25 +1904,8 @@ void HCMCampaign::run()
     removeLowScoreUnits(liberationArmy);
     removeLowScoreUnits(arvnArmy);
 
-    auto updateIndices = [](Army *army)
-    {
-        int LF = 0, EXP = 0;
-        for (Unit *unit : army->getUnitList()->getAllUnits())
-        {
-            if (Vehicle *vehicle = dynamic_cast<Vehicle *>(unit))
-            {
-                LF += vehicle->getAttackScore();
-            }
-            else if (Infantry *infantry = dynamic_cast<Infantry *>(unit))
-            {
-                EXP += infantry->getAttackScore();
-            }
-        }
-        army->setLF(LF > 1000 ? 1000 : (LF < 0 ? 0 : LF));
-        army->setExp(EXP > 500 ? 500 : (EXP < 0 ? 0 : EXP));
-    };
-    updateIndices(liberationArmy);
-    updateIndices(arvnArmy);
+    arvnArmy->recalcIndices();
+    liberationArmy->recalcIndices();
 }
 
 string HCMCampaign::printResult()

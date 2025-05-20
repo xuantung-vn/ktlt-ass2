@@ -108,6 +108,7 @@ public:
     ARVN(Unit **unitArray, int size, string name, BattleField *battleField);
     virtual void fight(Army *enemy, bool defence = false) override;
     virtual string str() const override;
+    void recalcIndices();
     virtual ~ARVN();
 };
 
@@ -174,16 +175,16 @@ public:
     string str() const override;
     string getStringType() const;
 };
-
-class UnitList
-{
-private:
     struct Node
     {
         Unit *unit;
         Node *next;
         Node(Unit *u) : unit(u), next(nullptr) {}
     };
+class UnitList
+{
+private:
+
     Node *head;
     Node *tail;
     int capacity;
@@ -196,6 +197,8 @@ public:
     bool insert(Unit *unit);
     bool isContain(VehicleType vehicleType);
     bool isContain(InfantryType infantryType);
+    Node *getHead();
+    void setHead(Node *newHead);
     string str() const;
     vector<Unit *> getAllUnits() const;
     void removeUnit(Unit *unit);
